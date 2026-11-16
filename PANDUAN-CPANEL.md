@@ -11,6 +11,23 @@ Tampilan **sama dengan ArahGPCH**: warna hijau GPCH `#006632`, ornamen wayang, s
 
 ---
 
+## Ringkas: instalasi dengan data awal (paket lengkap)
+
+Paket `asset-care-gpch-lengkap.zip` sudah berisi aplikasi, data awal (1.543 aset, 104 kelompok, 371 lokasi) dan 686 foto.
+
+1. Buat subdomain `gpch-assetcare.rucisoft.id` dengan document root `asset-care-gpch/public` (langkah 1), set PHP 8.3 (langkah 2), buat database & user kosong (langkah 3).
+2. File Manager → folder home → unggah `asset-care-gpch-lengkap.zip` → **Extract** (menghasilkan folder `asset-care-gpch`).
+3. Terminal:
+   ```bash
+   cd ~/asset-care-gpch
+   cp deploy/.env.cpanel.example .env
+   nano .env        # isi DB_DATABASE, DB_USERNAME, DB_PASSWORD (dan MAIL_* bila perlu)
+   bash deploy/deploy-cpanel.sh install-data
+   ```
+4. Pasang cron `schedule:run` (langkah 8), aktifkan HTTPS (langkah 7), lalu login `admin@assetcare.local` / `AssetCare@GPCH2026` dan ganti sandi.
+
+Semua aset masuk sebagai **Draft · belum terverifikasi**, lengkap dengan label QR dan foto. Data yang diasumsikan tercatat di catatan tiap aset untuk dikoreksi saat identifikasi.
+
 ## 0. Kebutuhan hosting
 
 | Kebutuhan | Nilai |
@@ -88,6 +105,8 @@ Pilih **salah satu** cara berikut.
 
 ```bash
 cd ~/asset-care-gpch
+bash deploy/deploy-cpanel.sh install-data  # dengan DATA AWAL inventaris GPCH (paket asset-care-gpch-lengkap.zip)
+# atau
 bash deploy/deploy-cpanel.sh install     # basis data bersih: referensi + Super Admin
 # atau
 bash deploy/deploy-cpanel.sh seed        # sama, ditambah data contoh untuk uji coba/pelatihan

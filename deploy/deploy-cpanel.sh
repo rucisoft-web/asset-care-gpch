@@ -4,6 +4,7 @@
 #  Pemakaian:
 #     bash deploy/deploy-cpanel.sh install   # pertama kali: tabel + data referensi + Super Admin (tanpa data contoh)
 #     bash deploy/deploy-cpanel.sh seed      # pertama kali + data contoh (kamar 301–310, template Deluxe, akun jabatan)
+#     bash deploy/deploy-cpanel.sh install-data  # pertama kali + DATA AWAL inventaris GPCH (aset, lokasi, foto)
 #     bash deploy/deploy-cpanel.sh update    # rilis pembaruan kode (data tetap)
 #  Variabel opsional: PHP_BIN=/opt/cpanel/ea-php83/root/usr/bin/php
 # ============================================================
@@ -54,13 +55,32 @@ case "$MODE" in
       $ART migrate --seed --force
     fi
     ;;
+  install-data)
+    $ART config:clear >/dev/null 2>&1 || true
+    if $ART assetcare:installed >/dev/null 2>&1; then
+      echo "✘ Database sudah berisi data. Instalasi dihentikan agar data tidak tertimpa."
+      exit 1
+    fi
+    SQL=database/sql/asset-care-gpch-data-awal.sql
+    [ -f "$SQL" ] || { echo "✘ $SQL tidak ada. Pakai paket asset-care-gpch-lengkap.zip."; exit 1; }
+    grep -q '^APP_KEY=base64' .env || $ART key:generate --force
+    $ART config:clear >/dev/null 2>&1 || true
+    echo "» Memuat data awal (struktur + referensi + 1.543 aset, 104 kelompok, 371 lokasi)"
+    $ART assetcare:load-sql "$SQL"
+    $ART migrate --force
+    $ART db:seed --class=Database\\Seeders\\ReferenceSeeder --force
+    echo "» Membuat label QR"
+    $ART assetcare:labels-ensure
+    echo ""
+    echo "  Login: admin@assetcare.local / AssetCare@GPCH2026 (wajib diganti saat login pertama)"
+    ;;
   update)
     $ART down --refresh=15 || true
     $ART migrate --force
     $ART db:seed --class=Database\\Seeders\\ReferenceSeeder --force
     $ART assetcare:labels-ensure
     ;;
-  *) echo "Mode tidak dikenal: $MODE (install | seed | update)"; exit 1 ;;
+  *) echo "Mode tidak dikenal: $MODE (install | install-data | seed | update)"; exit 1 ;;
 esac
 
 $ART storage:link >/dev/null 2>&1 || true
