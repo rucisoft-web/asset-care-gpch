@@ -71,6 +71,7 @@ class AdminPanelProvider extends PanelProvider
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([Beranda::class])
             ->widgets([])
+            ->renderHook(PanelsRenderHook::USER_MENU_BEFORE, fn () => Blade::render('<x-ac.help-button />'))
             ->renderHook(PanelsRenderHook::TOPBAR_START, fn () => Blade::render('<x-ac.property-badge />'))
             ->renderHook(PanelsRenderHook::FOOTER, fn () => Blade::render('<x-ac.footer />'))
             ->renderHook(PanelsRenderHook::SIDEBAR_FOOTER, fn () => \App\Support\Brand::showOrnament() ? Blade::render('<x-ac.sidebar-wayang />') : '')

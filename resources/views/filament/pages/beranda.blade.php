@@ -37,7 +37,7 @@
             </div>
             <div class="arah-grid arah-grid-4" style="margin-top:1rem">
                 <div class="arah-stat"><span class="label">Aset terdaftar</span><span class="value">{{ Fmt::num($kpi['assets_total']) }}</span><span class="sub">{{ Fmt::num($kpi['assets_active']) }} aktif · {{ Fmt::num($kpi['assets_draft']) }} draft</span></div>
-                <div class="arah-stat"><span class="label">Belum terverifikasi</span><span class="value">{{ Fmt::num($kpi['assets_unverified']) }}</span><span class="sub"><a href="{{ AR::getUrl('index', ['tableFilters' => ['verification_status' => ['value' => 'unverified']]]) }}">lihat daftar</a></span></div>
+                <div class="arah-stat"><span class="label">Belum terverifikasi</span><span class="value">{{ Fmt::num($kpi['assets_unverified']) }}</span><span class="sub"><a href="{{ AR::getUrl('index', ['filters' => ['verification_status' => ['value' => 'unverified']]]) }}">lihat daftar</a></span></div>
                 <div class="arah-stat"><span class="label">Label belum terpasang</span><span class="value">{{ Fmt::num($kpi['labels_pending']) }}</span><span class="sub">termasuk perlu label ulang</span></div>
                 <div class="arah-stat"><span class="label">Downtime · room days</span><span class="value">{{ Fmt::num($kpi['downtime_hours'], 1) }} j</span><span class="sub">{{ Fmt::num($kpi['room_days'], 2) }} room days terdampak · {{ $kpi['repeat_failures'] }} kegagalan berulang</span></div>
             </div>

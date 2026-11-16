@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\BrandAssetController;
+use App\Http\Controllers\HelpController;
 use App\Http\Controllers\LabelPdfController;
 use App\Http\Controllers\QrController;
 use App\Http\Controllers\ReportExportController;
@@ -20,5 +21,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/labels/{batch}/pdf', [LabelPdfController::class, 'show'])->name('labels.pdf');
     Route::get('/attachments/{attachment}', [AttachmentController::class, 'show'])->name('attachments.show');
     Route::get('/assets/{asset}/photo', [AttachmentController::class, 'assetPhoto'])->name('assets.photo');
+    Route::get('/bantuan/{key}', [HelpController::class, 'show'])->where('key', '[a-z0-9.\-]+')->name('help.show');
     Route::get('/reports/{report}/export', [ReportExportController::class, 'export'])->name('reports.export');
 });

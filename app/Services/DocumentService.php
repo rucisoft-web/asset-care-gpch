@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Asset;
 use App\Models\AssetDocument;
+use App\Models\DocumentType;
 use App\Models\Attachment;
 use App\Models\User;
 use App\Support\Fmt;
@@ -57,6 +58,37 @@ class DocumentService
 
             return $doc;
         });
+    }
+
+    /**
+     * Unggah cepat dokumen legalitas: banyak berkas sekaligus, sebagai satu dokumen (semua berkas = versi/lampiran)
+     * atau satu dokumen per berkas (judul dari nama berkas). Semua ditautkan ke aset yang dipilih.
+     *
+     * @param  array<string, string>  $files  path => nama asli
+     * @return list<AssetDocument>
+     */
+    public function quickUpload(array $assetIds, int $typeId, array $files, bool $perFile, array $card, ?User $by): array
+    {
+        $type = DocumentType::findOrFail($typeId);
+        $base = $card + [
+            'document_type_id' => $type->id,
+            'classification' => $card['classification'] ?? $type->default_classification ?? 'internal',
+            'pic_id' => $card['pic_id'] ?? $by?->id,
+            'no_expiry' => (bool) ($card['no_expiry'] ?? ! $type->has_expiry),
+        ];
+        if ($base['no_expiry']) {
+            $base['valid_until'] = null;
+        }
+        if (! $perFile) {
+            return [$this->create($base + ['title' => $card['title'] ?? $type->name, 'asset_ids' => $assetIds, 'files' => $files], $by)];
+        }
+        $out = [];
+        foreach ($files as $path => $name) {
+            $title = trim(preg_replace('/[_\-]+/', ' ', pathinfo((string) $name, PATHINFO_FILENAME))) ?: $type->name;
+            $out[] = $this->create($base + ['title' => \Illuminate\Support\Str::limit($title, 255, ''), 'asset_ids' => $assetIds, 'files' => [$path => $name]], $by);
+        }
+
+        return $out;
     }
 
     public function startRenewal(AssetDocument $doc, array $data): AssetDocument

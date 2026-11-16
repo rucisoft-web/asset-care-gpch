@@ -83,10 +83,15 @@ class ViewAssetDocument extends ViewRecord
         return [
             Action::make('unggah')->label('Unggah berkas / versi baru')->icon('heroicon-o-arrow-up-tray')->visible($can)
                 ->schema([
-                    AssetDocumentResource::fileUpload('file')->required(),
+                    AssetDocumentResource::fileUpload('file')->multiple()->maxFiles(20)->required()
+                        ->helperText('Boleh beberapa berkas sekaligus (mis. halaman pindaian, lampiran, adendum). Setiap berkas menjadi versi berikutnya.'),
                     TextInput::make('note')->label('Keterangan versi')->placeholder('mis. pindaian ulang lebih jelas, adendum 1'),
                 ])
-                ->action(fn (array $data) => $this->run(fn () => app(DocumentService::class)->addFile($d, $data['file'], $data['file_names'][$data['file']] ?? null, auth()->user(), $data['note'] ?? null), 'Berkas tersimpan; versi lama tetap ada')),
+                ->action(fn (array $data) => $this->run(function () use ($d, $data) {
+                    foreach (array_values(array_filter((array) $data['file'])) as $path) {
+                        app(DocumentService::class)->addFile($d, $path, $data['file_names'][$path] ?? null, auth()->user(), $data['note'] ?? null);
+                    }
+                }, 'Berkas tersimpan; versi lama tetap ada')),
             Action::make('perpanjang')->label('Catat pengajuan perpanjangan')->icon('heroicon-o-arrow-path')->color('info')
                 ->visible(fn () => $can() && ! $d->no_expiry && $d->status !== 'renewing')
                 ->schema([

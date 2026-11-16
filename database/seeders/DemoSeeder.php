@@ -155,6 +155,176 @@ class DemoSeeder extends Seeder
         $mk(['name' => 'TV lama kamar 305', 'category_id' => $cat('TV'), 'location_id' => Location::withoutGlobalScopes()->where('code', 'GU-L3-305')->value('id'), 'department_id' => $dept('ENG'), 'brand' => 'Samsung', 'serial_number' => 'SN-TV-305-LAMA', 'legacy_code' => 'LEG-TV-305', 'migration_source' => 'Register lama']);
         $this->fixedAssetDemo($p, $ce);
         $this->maintenanceDemo($p, $ce);
+        $this->workOrderDemo($p, $ce);
+    }
+
+    /**
+     * Contoh laporan kerusakan & work order lengkap (semua jenis & status, 90 hari terakhir) untuk pelatihan dan dashboard.
+     * Dijalankan lewat service yang sama dengan aplikasi (waktu dimundurkan), sehingga riwayat status, SLA, jam kerja & biaya realistis.
+     */
+    protected function workOrderDemo(Property $p, User $ce): void
+    {
+        if (\App\Models\WorkOrder::withoutGlobalScopes()->where('property_id', $p->id)->where('source', 'request')->exists()) {
+            return;
+        }
+        $u = fn (string $email) => User::where('email', $email)->first();
+        [$gm, $tech, $tech2, $hk, $fo, $fbm] = [$u('gm@grandpasundanhotel.com'), $u('teknisi1@grandpasundanhotel.com'), $u('teknisi2@grandpasundanhotel.com'),
+            $u('hk.supervisor@grandpasundanhotel.com'), $u('fo.supervisor@grandpasundanhotel.com'), $u('fbm@grandpasundanhotel.com')];
+        if (! $gm || ! $tech || ! $hk) {
+            return;
+        }
+        $srs = app(\App\Services\ServiceRequestService::class);
+        $svc = app(\App\Services\WorkOrderService::class);
+        $loc = fn (string $code) => Location::withoutGlobalScopes()->where('property_id', $p->id)->where('code', $code)->value('id');
+        $asset = fn (string $legacy) => Asset::withoutGlobalScopes()->where('property_id', $p->id)->where('legacy_code', $legacy)->value('id');
+        $base = now(\App\Support\Fmt::tz())->startOfDay()->setTimezone('UTC');
+        $at = fn (float $daysAgo, int $h = 9, int $m = 0) => $base->copy()->subDays((int) $daysAgo)->addHours($h - 7)->addMinutes($m);
+        $travel = function ($t) {
+            \Carbon\Carbon::setTestNow($t);
+            \Carbon\CarbonImmutable::setTestNow($t);
+        };
+        $as = function (User $who) {
+            \Illuminate\Support\Facades\Auth::setUser($who);
+        };
+        $done = ['diagnosis' => null, 'action_taken' => null, 'function_test_result' => 'pass', 'evidence_exception_reason' => 'Foto dikirim ke grup engineering (data contoh)'];
+
+        // [hari lalu, pelapor, lokasi, aset, kategori, gejala, dampak, keselamatan, judul WO, langkah]
+        $cases = [
+            [82, $hk, 'GU-L3-301', null, 'ac', 'AC kamar 301 tidak dingin, tamu komplain', 'kamar_tidak_dijual', false, 'AC kamar 301 tidak dingin',
+                ['close', 'Freon kurang & filter kotor', 'Isi freon R32, cuci filter & evaporator', [['material', 'Freon R32 1 kg', 1, 350000]], 26]],
+            [74, $fo, 'GU-L1-LOBBY', null, 'listrik', 'Dua lampu downlight lobby mati', 'layanan_alternatif', false, 'Lampu downlight lobby mati',
+                ['close', 'Lampu LED putus', 'Ganti 2 lampu LED 12W dari stok', [], 3, 'Stok lampu gudang engineering']],
+            [63, $hk, 'GU-L3-303', null, 'air', 'Rembesan air dari plafon kamar mandi 303', 'kamar_tidak_dijual', false, 'Kebocoran pipa kamar mandi 303',
+                ['close', 'Sambungan pipa PVC retak di shaft', 'Ganti sambungan & pipa 1 m, uji tekanan', [['vendor', 'Jasa plumbing (vendor)', 1, 1250000], ['material', 'Pipa & fitting PVC', 1, 185000]], 30]],
+            [52, $hk, 'GU-L3-302', null, 'listrik', 'Lampu tidur kamar 302 berkedip', 'kosmetik', false, 'Lampu tidur kamar 302 berkedip',
+                ['reopen', 'Fitting lampu longgar', 'Kencangkan fitting', [], 4, 'Pekerjaan kecil']],
+            [47, $fbm, 'MICE-DOME', 'LEG-SND-01', 'mice', 'Sound system Malibu Dome berdengung saat acara', 'acara_terganggu', false, 'Dengung sound system Malibu Dome',
+                ['close', 'Kabel balanced rusak & ground loop', 'Ganti 2 kabel XLR, pasang DI box', [['material', 'Kabel XLR 10 m', 2, 175000]], 6]],
+            [41, $fbm, 'GU-L1-PASTRY', 'LEG-FRZ-01', 'kitchen', 'Freezer pastry suhu naik ke -8°C', 'layanan_alternatif', false, 'Freezer pastry tidak mencapai suhu',
+                ['close_approval', 'Kompresor lemah & kipas kondensor macet', 'Ganti motor fan kondensor, servis kompresor', [['vendor', 'Servis kompresor (vendor)', 1, 2750000], ['material', 'Motor fan kondensor', 1, 950000]], 120, null, 4500000]],
+            [36, $u('engineering@grandpasundanhotel.com'), 'GU-L1-LOBBY', 'LEG-GEN-01', 'listrik', 'Genset susah start saat uji mingguan', 'layanan_alternatif', false, 'Genset susah start – aki lemah',
+                ['close', 'Aki 12V lemah (umur 3 tahun)', 'Ganti 2 aki 12V 100Ah', [['material', 'Aki 12V 100Ah', 2, 1150000]], 8]],
+            [27, $fbm, 'MICE-DOME', 'LEG-PRJ-01', 'mice', 'Gambar projector Malibu Dome redup', 'acara_terganggu', false, 'Projector Malibu Dome redup',
+                ['verified', 'Lampu projector mendekati batas jam', 'Bersihkan filter, mode eco; ajukan lampu baru', [], 5, 'Belum ada biaya; lampu diajukan terpisah']],
+            [21, $hk, 'GU-L3-305', 'LEG-TV-305', 'elektronik', 'TV kamar 305 tidak ada sinyal', 'kamar_tidak_dijual', false, 'TV kamar 305 tidak ada sinyal',
+                ['completed', 'Konektor coax lepas di belakang TV', 'Pasang ulang konektor F, scan ulang channel', [], 2, 'Tenaga internal']],
+            [14, $fbm, 'GU-L1-RESTO', null, 'furniture', 'Kaki kursi restoran patah (meja 12)', 'kosmetik', false, 'Perbaikan kursi restoran meja 12',
+                ['in_progress']],
+            [6, $fo, 'GU-L3-306', null, 'it', 'Door lock kamar 306 tidak membaca kartu', 'kamar_tidak_dijual', false, 'Door lock kamar 306 error',
+                ['assigned']],
+            [5, $fbm, 'GU-L1-KIT', 'LEG-CHL-01', 'kitchen', 'Kompresor chiller kitchen berbunyi keras', 'layanan_alternatif', false, 'Kompresor chiller kitchen bising',
+                ['awaiting', 7500000]],
+            [3, $hk, 'GU-L3-308', null, 'air', 'Kran wastafel kamar 308 menetes', 'kosmetik', false, 'Kran wastafel kamar 308 menetes',
+                ['on_hold', 'Menunggu kamar kosong (tamu long stay)']],
+            [2, $fbm, 'GU-L1-KIT', null, 'keselamatan', 'Tercium bau gas di dekat kompor wok', 'keselamatan', true, 'Bau gas di area kompor wok',
+                ['close_emergency', 'Selang regulator retak', 'Tutup katup, ganti selang & regulator, uji busa sabun', [['material', 'Selang & regulator gas SNI', 1, 425000]], 2]],
+            [1, $hk, 'GU-L3-310', null, 'ac', 'AC kamar 310 bocor air', 'kamar_tidak_dijual', false, 'AC kamar 310 bocor air',
+                ['cancelled', 'Duplikat laporan; sudah ditangani di WO lain']],
+            [0.5, $fo, 'GU-L1-LOBBY', null, 'bangunan', 'Cat dinding koridor lobby mengelupas', 'kosmetik', false, 'Pengecatan ulang dinding koridor lobby',
+                ['draft']],
+        ];
+        try {
+            foreach ($cases as $i => $c) {
+                [$ago, $rep, $locCode, $legacy, $cat, $symptom, $impact, $safety, $title, $flow] = $c;
+                $t = $at($ago, 8 + ($i % 6), 10 * ($i % 5));
+                $travel($t);
+                $as($rep);
+                $sr = $srs->create(['asset_id' => $legacy ? $asset($legacy) : null, 'location_id' => $loc($locCode), 'category' => $cat, 'symptom' => $symptom, 'impact' => $impact, 'is_safety' => $safety], $rep);
+                $travel($t = $t->copy()->addMinutes($safety ? 5 : 20));
+                $as($ce);
+                $wo = $srs->createWorkOrder([$sr->id], ['title' => $title, 'estimated_cost' => $flow[0] === 'awaiting' ? $flow[1] : ($flow[0] === 'close_approval' ? $flow[6] : null)], $ce);
+                $kind = $flow[0];
+                if ($kind === 'draft') {
+                    continue;
+                }
+                if ($kind === 'cancelled') {
+                    $travel($t->copy()->addMinutes(30));
+                    $svc->run($wo, 'cancel', ['reason' => $flow[1]], $ce);
+
+                    continue;
+                }
+                if (in_array($kind, ['awaiting', 'close_approval'], true)) {
+                    $wo = $svc->run($wo, 'submit', ['estimated_cost' => $wo->estimated_cost, 'reason' => 'Perlu penggantian komponen'], $ce);
+                    if ($kind === 'awaiting') {
+                        continue;
+                    }
+                    $travel($t = $t->copy()->addHours(3));
+                    $as($gm);
+                    $wo = $svc->run($wo, 'approve', ['reason' => 'Disetujui, prioritaskan sebelum akhir pekan'], $gm);
+                    $as($ce);
+                } else {
+                    $wo = $svc->run($wo, 'approve_direct', $kind === 'close_emergency' ? ['reason' => 'Darurat keselamatan'] : [], $ce);
+                }
+                $pic = $i % 3 === 0 ? $tech2 : $tech;
+                $travel($t = $t->copy()->addMinutes(15));
+                $wo = $svc->run($wo, 'assign', ['pic_id' => $pic->id, 'team_ids' => $kind === 'close_emergency' ? [$tech->id === $pic->id ? $tech2->id : $tech->id] : []], $ce);
+                if ($kind === 'assigned') {
+                    continue;
+                }
+                $travel($t = $t->copy()->addMinutes($safety ? 5 : 40));
+                $as($pic);
+                $wo = $svc->run($wo, 'start', [], $pic);
+                if ($kind === 'in_progress') {
+                    continue;
+                }
+                if ($kind === 'on_hold') {
+                    $travel($t->copy()->addMinutes(20));
+                    $svc->run($wo, 'hold', ['reason' => $flow[1]], $pic);
+
+                    continue;
+                }
+                [, $diag, $action, $costs, $minutes] = $flow;
+                $noCost = $flow[5] ?? null;
+                if ($kind === 'close_approval') {
+                    $travel($t = $t->copy()->addMinutes(60));
+                    $wo = $svc->run($wo, 'hold', ['reason' => 'Menunggu suku cadang dari vendor'], $pic);
+                    $travel($t = $t->copy()->addDays(2));
+                    $wo = $svc->run($wo, 'resume', [], $pic);
+                }
+                foreach ($costs as [$type, $desc, $qty, $unit]) {
+                    $svc->addCost($wo, ['type' => $type, 'description' => $desc, 'quantity' => $qty, 'unit_cost' => $unit], $pic);
+                }
+                $travel($t = $t->copy()->addMinutes($minutes));
+                $wo = $svc->run($wo, 'complete', ['diagnosis' => $diag, 'action_taken' => $action, 'root_cause' => $diag] + $done + ($costs ? [] : ['no_cost_reason' => $noCost ?: 'Tenaga internal, tanpa material']), $pic);
+                if ($kind === 'completed') {
+                    continue;
+                }
+                $travel($t = $t->copy()->addMinutes(45));
+                $as($ce);
+                $wo = $svc->run($wo, 'verify', ['asset_status_after' => $wo->asset_id ? 'serviceable' : null, 'reason' => 'Dicek bersama pelapor'], $ce);
+                if ($kind === 'verified') {
+                    continue;
+                }
+                $travel($t = $t->copy()->addHours(2));
+                $wo = $svc->run($wo, 'close', [], $ce);
+                if ($kind === 'reopen') {
+                    $travel($t = $t->copy()->addDays(2));
+                    $wo = $svc->run($wo, 'reopen', ['reason' => 'Lampu kembali berkedip – pelapor HK'], $ce);
+                    $wo = $svc->run($wo, 'assign', ['pic_id' => $tech->id], $ce);
+                    $as($tech);
+                    $travel($t = $t->copy()->addMinutes(30));
+                    $wo = $svc->run($wo, 'start', [], $tech);
+                    $travel($t = $t->copy()->addMinutes(25));
+                    $wo = $svc->run($wo, 'complete', ['diagnosis' => 'Ballast/driver LED rusak', 'action_taken' => 'Ganti driver LED', 'root_cause' => 'Driver LED rusak, bukan fitting'] + $done + ['no_cost_reason' => 'Stok driver gudang'], $tech);
+                    $as($ce);
+                    $travel($t = $t->copy()->addMinutes(30));
+                    $wo = $svc->run($wo, 'verify', ['reason' => 'OK'], $ce);
+                    $wo = $svc->run($wo, 'close', [], $ce);
+                }
+            }
+            // dua laporan baru belum dibuatkan WO (satu sudah ditriase)
+            $travel($at(0, 10, 15));
+            $as($hk);
+            $srs->create(['location_id' => $loc('GU-L3-309'), 'category' => 'air', 'symptom' => 'Air panas shower kamar 309 kecil', 'impact' => 'layanan_alternatif'], $hk);
+            $travel($at(0, 11, 0));
+            $sr = $srs->create(['location_id' => $loc('GU-L3-307'), 'category' => 'furniture', 'symptom' => 'Engsel lemari kamar 307 lepas', 'impact' => 'kosmetik'], $hk);
+            $as($ce);
+            $srs->triage($sr, [], $ce);
+        } finally {
+            \Carbon\Carbon::setTestNow();
+            \Carbon\CarbonImmutable::setTestNow();
+            \Illuminate\Support\Facades\Auth::logout();
+        }
     }
 
     /** Contoh rencana PM & pembacaan kondisi (hanya bila belum ada). */

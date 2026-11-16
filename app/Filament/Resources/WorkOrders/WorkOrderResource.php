@@ -127,6 +127,12 @@ class WorkOrderResource extends Resource
                 SelectFilter::make('type')->label('Jenis')->options(WorkOrder::TYPES)->multiple(),
                 SelectFilter::make('source')->label('Sumber')->options(WorkOrder::SOURCES),
                 SelectFilter::make('pic_id')->label('PIC')->relationship('pic', 'name'),
+                Filter::make('dibuat')->label('Tanggal masuk')
+                    ->schema([\Filament\Forms\Components\DatePicker::make('from')->label('Masuk dari'), \Filament\Forms\Components\DatePicker::make('until')->label('Masuk sampai')])
+                    ->query(fn ($query, array $data) => $query
+                        ->when($data['from'] ?? null, fn ($q, $d) => $q->where('received_at', '>=', \Carbon\CarbonImmutable::parse($d, Fmt::tz())->startOfDay()->setTimezone('UTC')))
+                        ->when($data['until'] ?? null, fn ($q, $d) => $q->where('received_at', '<=', \Carbon\CarbonImmutable::parse($d, Fmt::tz())->endOfDay()->setTimezone('UTC'))))
+                    ->indicateUsing(fn (array $data) => array_filter([($data['from'] ?? null) ? 'Masuk dari '.$data['from'] : null, ($data['until'] ?? null) ? 's.d. '.$data['until'] : null])),
                 Filter::make('overdue')->label('Melewati target')->query(fn ($query) => $query->whereIn('status', WorkOrder::OPEN)->where('due_at', '<', now())),
             ])
             ->recordActions([ViewAction::make()])
