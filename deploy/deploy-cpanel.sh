@@ -71,6 +71,11 @@ case "$MODE" in
     $ART db:seed --class=Database\\Seeders\\ReferenceSeeder --force
     echo "» Membuat label QR"
     $ART assetcare:labels-ensure
+    TK=database/sql/data-awal-template-kamar.xlsx
+    if [ -f "$TK" ]; then
+      echo "» Template kamar & aset tetap per kamar"
+      $ART assetcare:import-room-templates "$TK" --generate
+    fi
     echo ""
     echo "  Login: admin@assetcare.local / AssetCare@GPCH2026 (wajib diganti saat login pertama)"
     ;;

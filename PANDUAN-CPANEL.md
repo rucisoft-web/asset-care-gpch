@@ -28,6 +28,21 @@ Paket `asset-care-gpch-lengkap.zip` sudah berisi aplikasi, data awal (1.543 aset
 
 Semua aset masuk sebagai **Draft · belum terverifikasi**, lengkap dengan label QR dan foto. Data yang diasumsikan tercatat di catatan tiap aset untuk dikoreksi saat identifikasi.
 
+## Template kamar & aset tetap per kamar
+
+Workbook `database/sql/data-awal-template-kamar.xlsx` (ikut di kedua paket zip) berisi 7 tipe kamar, 163 kamar Main Building lt 7–11 dan West Wing lt 1–3, template jenis aset tetap per tipe beserta jumlahnya, dan pengecualian per kamar. Sumbernya file inventaris kamar Housekeeping (MB) dan checklist inspeksi (WW), digabung dengan AC & TV yang sudah ada di data awal.
+
+```bash
+cd ~/asset-care-gpch
+php artisan assetcare:import-room-templates database/sql/data-awal-template-kamar.xlsx --dry-run   # cek dulu
+php artisan assetcare:import-room-templates database/sql/data-awal-template-kamar.xlsx --generate  # simpan + buat aset per kamar
+```
+
+- Tanpa `--generate`: hanya tipe kamar, template (published) dan pengecualian. Aset bisa dibuat belakangan lewat menu **Generate aset kamar**.
+- Dengan `--generate`: AC & TV data awal dicocokkan ke slot kamarnya (tidak dobel), sisanya dibuat sebagai aset **draft** dengan label QR (±1.770 aset).
+- Aman diulang. Bila workbook diedit lalu diimpor lagi, template yang berubah menjadi versi baru dan hanya kekurangan yang dibuat.
+- `install-data` pada instalasi baru menjalankan langkah ini otomatis bila workbook ada.
+
 ## 0. Kebutuhan hosting
 
 | Kebutuhan | Nilai |

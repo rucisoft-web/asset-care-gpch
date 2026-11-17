@@ -313,6 +313,9 @@ return [
             'mode' => 'Individual (1 QR per unit) atau Kelompok jumlah (1 QR untuk semua).',
             'positions' => 'Label posisi bila lebih dari satu, mis. "kiri, kanan".',
         ],
+        'tips' => ['Template yang sudah terbit tidak bisa diedit; klik "Lihat isi" untuk melihat jenis aset tetap dan jumlahnya per tipe kamar.',
+            'Kamar yang isinya berbeda dari standar dicatat sebagai pengecualian (jumlah berbeda, tidak tersedia, atau tambahan) sehingga Generate aset membuat jumlah yang benar.',
+            'Template awal GPCH diimpor dari workbook data-awal-template-kamar.xlsx dengan perintah assetcare:import-room-templates.'],
         'shots' => [['room-asset-templates.jpg', 'Template aset kamar']],
     ],
 

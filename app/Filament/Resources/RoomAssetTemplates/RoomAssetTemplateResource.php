@@ -118,6 +118,18 @@ class RoomAssetTemplateResource extends Resource
 
         return [
             EditAction::make(),
+            Action::make('isi')->label('Lihat isi')->icon('heroicon-o-list-bullet')->color('gray')
+                ->modalHeading(fn (RoomAssetTemplate $record) => $record->label)
+                ->modalSubmitAction(false)->modalCancelActionLabel('Tutup')
+                ->modalContent(function (RoomAssetTemplate $record) {
+                    $record->load('items.category', 'items.department', 'roomType');
+                    $rooms = \App\Models\Location::where('room_type_id', $record->room_type_id)->whereIn('location_type', ['room', 'venue'])->pluck('id');
+                    $ex = \App\Models\RoomException::whereIn('room_id', $rooms)->count();
+                    $rows = $record->items->map(fn ($i) => '<tr><td>'.e($i->standard_name).'</td><td>'.e($i->category?->name).'</td><td style="text-align:right"><b>'.(int) $i->quantity.'</b> '.e($i->unit).'</td><td>'.e($i->department?->name ?? '—').'</td><td>'.e($i->specification ?? '').'</td></tr>')->join('');
+
+                    return new HtmlString('<div class="arah"><p class="arah-muted">Tipe kamar <b>'.e($record->roomType?->name).'</b> · '.$rooms->count().' kamar · '.$record->unitCount().' unit aset per kamar · '.$ex.' pengecualian per kamar (jumlah berbeda / tidak tersedia / tambahan).</p>'
+                        .'<table class="arah-table"><thead><tr><th>Jenis aset tetap</th><th>Kategori</th><th>Jumlah</th><th>Departemen</th><th>Keterangan</th></tr></thead><tbody>'.$rows.'</tbody></table></div>');
+                }),
             Action::make('terbitkan')->label('Terbitkan')->icon('heroicon-o-check-badge')->color('success')
                 ->visible(fn (RoomAssetTemplate $record) => $record->status === 'draft' && $u()->hasPermission('template.publish'))
                 ->requiresConfirmation()
