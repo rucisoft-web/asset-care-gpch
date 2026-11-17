@@ -108,6 +108,9 @@ class RoomAssetTemplateResource extends Resource
                 TextColumn::make('published_at')->label('Terbit')->dateTime('d M Y')->placeholder('—'),
             ])
             ->recordActions(static::recordActions())
+            // template terbit terkunci: klik baris membuka "Lihat isi", bukan halaman edit (403)
+            ->recordUrl(fn (RoomAssetTemplate $record) => static::canEdit($record) ? static::getUrl('edit', ['record' => $record]) : null)
+            ->recordAction(fn (RoomAssetTemplate $record) => static::canEdit($record) ? null : 'isi')
             ->defaultSort('code')
             ->groups(['code']);
     }
@@ -117,7 +120,7 @@ class RoomAssetTemplateResource extends Resource
         $u = fn () => auth()->user();
 
         return [
-            EditAction::make(),
+            EditAction::make()->visible(fn (RoomAssetTemplate $record) => static::canEdit($record)),
             Action::make('isi')->label('Lihat isi')->icon('heroicon-o-list-bullet')->color('gray')
                 ->modalHeading(fn (RoomAssetTemplate $record) => $record->label)
                 ->modalSubmitAction(false)->modalCancelActionLabel('Tutup')

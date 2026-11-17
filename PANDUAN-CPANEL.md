@@ -224,6 +224,14 @@ Setiap label QR berisi alamat `ASSETCARE_QR_BASE_URL/q/...`. **Setelah label dic
 - Langkah awal PM: buka **Rencana PM → Buat dari interval kategori** (memakai interval PM bawaan tiap kategori), lalu sunting checklist dan PIC per rencana.
 - Tidak perlu cron baru; WO PM dibuat oleh `schedule:run` yang sudah terpasang.
 
+### Pembaruan 17 November 2026: menu Lapangan untuk petugas identifikasi aset
+
+- Peran baru **Petugas Identifikasi Aset** (`field-officer`). Petugas dengan peran ini login di `https://<domain>/lapangan` lewat ponsel dan hanya melihat menu Lapangan: Beranda (progres), Lokasi (gedung > lantai > kamar), Scan QR, Cari, dan Akun. Bila mereka membuka `/admin`, otomatis dialihkan ke `/lapangan`.
+- Di setiap aset petugas menandai ditemukan / tidak ditemukan, memilih kondisi A-E, status operasional, merek/model/serial, mengambil foto, dan menulis catatan. Setelah simpan, aplikasi langsung membuka aset berikutnya di kamar yang sama.
+- Aset yang ada di lapangan tetapi belum terdaftar dicatat lewat tombol "Aset temuan" (masuk sebagai draft, label QR diterbitkan).
+- Pengguna dengan peran lain (admin, asset controller) tetap memakai panel web `/admin` seperti biasa, dan juga bisa membuka `/lapangan`.
+- Setelah memperbarui kode, jalankan `bash deploy/deploy-cpanel.sh update` (atau `php artisan db:seed --class='Database\Seeders\ReferenceSeeder' --force`) agar peran baru terdaftar.
+
 ### Data awal aset (dari inventaris departemen)
 
 Folder `data-awal/` (dikirim terpisah, tidak ada di repo publik) berisi:

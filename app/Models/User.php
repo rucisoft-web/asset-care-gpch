@@ -113,6 +113,14 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         return $this->roles->contains('slug', $slug);
     }
 
+    /** Hanya berperan Petugas Identifikasi Aset → hanya memakai menu Lapangan (/lapangan), tidak masuk panel admin. */
+    public function isFieldOnly(): bool
+    {
+        $this->loadMissing('roles');
+
+        return $this->roles->isNotEmpty() && $this->roles->every(fn ($r) => $r->slug === 'field-officer');
+    }
+
     public function isSuperAdmin(): bool
     {
         return $this->hasRole('super-admin');

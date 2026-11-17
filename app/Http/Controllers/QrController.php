@@ -15,6 +15,10 @@ class QrController extends Controller
 
             return redirect('/admin/login');
         }
+        // petugas identifikasi membuka aset di menu Lapangan
+        if ($request->user()->isFieldOnly() || $request->query('m') === 'lapangan') {
+            return redirect()->route('field.resolve', ['kode' => url('/q/'.$token)]);
+        }
         $r = $scan->handle(url('/q/'.$token), $request->user(), 'url');
 
         return $r['url'] ? redirect($r['url']) : response()->view('qr.invalid', ['message' => $r['message']], 410);

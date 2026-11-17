@@ -90,6 +90,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                \App\Http\Middleware\RedirectFieldOfficer::class,
                 EnsurePasswordChanged::class,
             ]);
     }

@@ -476,7 +476,7 @@ return [
     'users' => [
         'title' => 'Pengguna',
         'konsep' => ['Akun pengguna dan perannya. Akses ditolak secara default; pengguna hanya melihat menu sesuai peran. Pengguna yang keluar dinonaktifkan, tidak dihapus, agar riwayat tetap utuh.'],
-        'langkah' => ['Klik "Buat", isi nama, email, jabatan, departemen, kata sandi awal.', 'Pilih peran (bisa lebih dari satu).', 'Biarkan "Wajib ganti kata sandi" aktif; pengguna akan mengganti sandi dan memasang 2FA saat login pertama.'],
+        'langkah' => ['Klik "Buat", isi nama, email, jabatan, departemen, kata sandi awal.', 'Pilih peran (bisa lebih dari satu).', 'Biarkan "Wajib ganti kata sandi" aktif; pengguna akan mengganti sandi dan memasang 2FA saat login pertama.', 'Untuk petugas yang mendata aset lewat ponsel, beri HANYA peran "Petugas Identifikasi Aset". Mereka login di alamat /lapangan dan hanya melihat menu Lapangan (Beranda, Lokasi, Scan, Cari, Akun), tidak melihat panel admin.'],
         'fields' => [
             'email' => 'Dipakai untuk login dan notifikasi.',
             'phone' => 'Nomor telepon/WhatsApp untuk dihubungi teknisi.',
