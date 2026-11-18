@@ -9,7 +9,7 @@ use App\Services\WorkflowException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/** Label Tom & Jerry No.103 (64 × 32 mm, 2 × 5) dengan kalibrasi posisi & lembar uji. */
+/** Label Tom & Jerry No.103 (64 × 32 mm, 3 × 4 = 12 per lembar) dengan kalibrasi posisi & lembar uji. */
 class LabelMediaTest extends TestCase
 {
     use RefreshDatabase;
@@ -20,14 +20,15 @@ class LabelMediaTest extends TestCase
     {
         $admin = User::whereHas('roles', fn ($q) => $q->where('slug', 'super-admin'))->firstOrFail();
         $p = LabelService::profile('tj-103');
-        $this->assertSame([64, 32, 2, 5], [$p['label_w'], $p['label_h'], $p['cols'], $p['rows']]);
-        $this->assertSame(10, app(LabelService::class)->layout(23, 'tj-103')['per_sheet']);
-        $this->assertSame(3, app(LabelService::class)->layout(23, 'tj-103')['sheets']);
+        $this->assertSame([64, 32, 3, 4], [$p['label_w'], $p['label_h'], $p['cols'], $p['rows']]);
+        $this->assertSame(12, app(LabelService::class)->layout(23, 'tj-103')['per_sheet']);
+        $this->assertSame(2, app(LabelService::class)->layout(23, 'tj-103')['sheets']);
+        $this->assertLessThanOrEqual(210, $p['margin_left'] * 2 + 3 * 64 + 2 * $p['gap_x']);
 
-        LabelService::saveCalibration('tj-103', ['margin_left' => 12.5, 'margin_top' => 15, 'gap_x' => 5, 'gap_y' => 2, 'cols' => 2, 'rows' => 5], $admin);
+        LabelService::saveCalibration('tj-103', ['margin_left' => 8.5, 'margin_top' => 15, 'gap_x' => 3, 'gap_y' => 2, 'cols' => 3, 'rows' => 4], $admin);
         AppSetting::flush();
         $p = LabelService::profile('tj-103');
-        $this->assertSame([12.5, 15.0, 5.0, 2.0], [$p['margin_left'], $p['margin_top'], $p['gap_x'], $p['gap_y']]);
+        $this->assertSame([8.5, 15.0, 3.0, 2.0], [$p['margin_left'], $p['margin_top'], $p['gap_x'], $p['gap_y']]);
 
         $this->expectException(WorkflowException::class);
         LabelService::saveCalibration('tj-103', ['margin_left' => 100, 'cols' => 2], $admin); // 100 + 2×64 > 210
@@ -41,10 +42,10 @@ class LabelMediaTest extends TestCase
         $this->get(route('labels.test', 'tj-103'))->assertOk()->assertHeader('content-type', 'application/pdf');
         $labels = app(LabelService::class)->select(['include_unverified' => true])->take(12);
         $batch = app(LabelService::class)->createBatch($labels, 'tj-103', 1, $u);
-        $this->assertSame((int) ceil($labels->count() / 10), $batch->sheet_count);
+        $this->assertSame((int) ceil($labels->count() / 12), $batch->sheet_count);
         $this->get(route('labels.pdf', $batch))->assertOk();
         \Livewire\Livewire::test(\App\Filament\Pages\CetakLabel::class)->assertSet('profile', 'tj-103')
-            ->set('cal.margin_left', 14)->call('saveCal')->assertSet('cal.margin_left', 14.0);
+            ->set('cal.margin_left', 7)->call('saveCal')->assertSet('cal.margin_left', 7.0);
     }
 
     public function test_room_and_category_lists_follow_selected_location(): void

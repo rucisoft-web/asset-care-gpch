@@ -45,9 +45,9 @@ return [
         // Lembar label Tom & Jerry No.103 (32 × 64 mm, 10 label: 2 kolom × 5 baris) ditempel di kertas A4 pembawa.
         // Posisi & jarak dikalibrasi di halaman Cetak label (disimpan per profil), lalu uji dengan lembar uji.
         'tj-103' => [
-            'name' => 'Tom & Jerry No.103 · 64 × 32 mm (2 × 5, tempel di A4)', 'type' => 'a4', 'carrier' => true, 'page_w' => 210, 'page_h' => 297,
-            'label_w' => 64, 'label_h' => 32, 'cols' => 2, 'rows' => 5,
-            'margin_top' => 20, 'margin_left' => 20, 'gap_x' => 4, 'gap_y' => 3, 'qr_mm' => 27,
+            'name' => 'Tom & Jerry No.103 · 64 × 32 mm (3 × 4 = 12 label, tempel di A4)', 'type' => 'a4', 'carrier' => true, 'page_w' => 210, 'page_h' => 297,
+            'label_w' => 64, 'label_h' => 32, 'cols' => 3, 'rows' => 4, 'radius' => 2.5,
+            'margin_top' => 20, 'margin_left' => 6, 'gap_x' => 3, 'gap_y' => 3, 'qr_mm' => 27,
         ],
         'a4-50x30' => [
             'name' => 'A4 · 50 × 30 mm (3 × 9)', 'type' => 'a4', 'page_w' => 210, 'page_h' => 297,

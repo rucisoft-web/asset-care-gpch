@@ -18,7 +18,7 @@
     .sheet { position: relative; width: {{ $p['page_w'] }}mm; height: {{ $p['page_h'] }}mm; page-break-after: always; overflow: hidden; }
     .sheet:last-child { page-break-after: auto; }
     .cell { position: absolute; width: {{ $p['label_w'] }}mm; height: {{ $p['label_h'] }}mm; overflow: hidden; }
-    .guide { outline: 0.2mm dashed #a8a29e; }
+    .guide { border: 0.2mm dashed #a8a29e; border-radius: {{ $p['radius'] ?? 0 }}mm; }
     .qr { position: absolute; left: {{ $pad }}mm; top: {{ ($p['label_h'] - $qr) / 2 }}mm; width: {{ $qr }}mm; height: {{ $qr }}mm; }
     .txt { position: absolute; left: {{ $qr + 2 * $pad }}mm; top: {{ $pad }}mm; width: {{ $textW }}mm; height: {{ $p['label_h'] - 2 * $pad }}mm; overflow: hidden; }
     .brand { font-size: {{ $big ? 6.5 : ($wide ? 5.8 : 5) }}pt; color: {{ \App\Support\Brand::color() }}; font-weight: bold; letter-spacing: .2pt; text-transform: uppercase; }
@@ -37,7 +37,7 @@
 @foreach ($sheets as $sheetNo => $cells)
     <div class="sheet">
         @if ($guides && ($p['carrier'] ?? false))
-            <div style="position:absolute; left:{{ $p['margin_left'] - 3 }}mm; top:{{ $p['margin_top'] - 3 }}mm; width:{{ $blockW + 6 }}mm; height:{{ $blockH + 6 }}mm; border:0.3mm dashed #b45309;"></div>
+            <div style="position:absolute; left:{{ $p['margin_left'] - 3 }}mm; top:{{ $p['margin_top'] - 3 }}mm; width:{{ $blockW + 6 }}mm; height:{{ $blockH + 6 }}mm; border:0.3mm dashed #b45309; box-sizing:border-box;"></div>
             <div style="position:absolute; left:{{ $p['margin_left'] - 3 }}mm; top:{{ $p['margin_top'] - 7 }}mm; font-size:6.5pt; color:#b45309;">Posisi lembar label (tempel lembar Tom &amp; Jerry tepat di sini)</div>
         @endif
         @if ($test ?? false)
