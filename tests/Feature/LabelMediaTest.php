@@ -46,4 +46,37 @@ class LabelMediaTest extends TestCase
         \Livewire\Livewire::test(\App\Filament\Pages\CetakLabel::class)->assertSet('profile', 'tj-103')
             ->set('cal.margin_left', 14)->call('saveCal')->assertSet('cal.margin_left', 14.0);
     }
+
+    public function test_room_and_category_lists_follow_selected_location(): void
+    {
+        $admin = User::whereHas('roles', fn ($q) => $q->where('slug', 'super-admin'))->firstOrFail();
+        $this->actingAs($admin);
+        $asset = \App\Models\Asset::whereNotNull('location_id')->firstOrFail();
+        $room = \App\Models\Location::findOrFail($asset->location_id);
+        $floor = \App\Models\Location::findOrFail($room->parent_id);
+        $otherRoom = \App\Models\Location::whereIn('location_type', ['room', 'venue', 'area'])->where('is_active', true)
+            ->where('sort_key', 'not like', $floor->sort_key.'/%')->firstOrFail();
+        $unused = \App\Models\AssetCategory::create(['code' => 'ZZTEST', 'name' => 'Kategori kosong uji', 'is_active' => true]);
+
+        $lw = \Livewire\Livewire::test(\App\Filament\Pages\CetakLabel::class)
+            ->set('roomIds', [(string) $otherRoom->id])->set('categoryIds', [(string) $unused->id])
+            ->set('floorId', $floor->id);
+        $rooms = $lw->instance()->rooms->pluck('id');
+        $this->assertTrue($rooms->contains($room->id));
+        $this->assertFalse($rooms->contains($otherRoom->id));
+        $this->assertSame([], $lw->get('roomIds'), 'kamar di luar lantai dibuang');
+        $this->assertSame([], $lw->get('categoryIds'), 'kategori yang tidak ada di lantai dibuang');
+        $cats = $lw->instance()->categories;
+        $this->assertTrue($cats->pluck('id')->contains($asset->category_id));
+        $this->assertFalse($cats->pluck('id')->contains($unused->id));
+        $lw->assertSee('Tampilkan semua');
+
+        $lw->set('roomIds', [(string) $room->id]);
+        $expected = \App\Models\Asset::where('location_id', $room->id)->distinct()->pluck('category_id')->sort()->values()->all();
+        $this->assertEqualsCanonicalizing($expected, $lw->instance()->categories->pluck('id')->filter(fn ($id) => in_array($id, $expected))->values()->all());
+
+        $lw->set('allRooms', true)->set('allCategories', true);
+        $this->assertTrue($lw->instance()->rooms->pluck('id')->contains($otherRoom->id));
+        $this->assertTrue($lw->instance()->categories->pluck('id')->contains($unused->id));
+    }
 }

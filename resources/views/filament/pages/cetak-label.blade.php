@@ -17,13 +17,27 @@
                     <option value="">— semua —</option>
                     @foreach ($this->floors as $f)<option value="{{ $f->id }}">{{ $f->full_path }}</option>@endforeach
                 </select>
-                <label class="arah-muted" style="display:block; margin-top:.5rem">Kamar / ruang tertentu (boleh banyak)</label>
+                <div class="ac-pick-head">
+                    <label class="arah-muted">Kamar / ruang tertentu (boleh banyak)
+                        <span class="ac-pick-note">{{ $this->rooms->count() }} ruang{{ ! $allRooms && $floorId ? ' di lantai/gedung terpilih' : '' }}{{ count($roomIds) ? ' · '.count($roomIds).' dipilih' : '' }}</span></label>
+                    <span class="ac-pick-actions">
+                        @if (count($roomIds))<button type="button" class="ac-pick-btn" wire:click="$set('roomIds', [])">Kosongkan</button>@endif
+                        @if ($floorId)<button type="button" class="ac-pick-btn" wire:click="$toggle('allRooms')">{{ $allRooms ? 'Sesuai lantai' : 'Tampilkan semua' }}</button>@endif
+                    </span>
+                </div>
                 <select class="ac-input" multiple size="5" wire:model.live="roomIds">
                     @foreach ($this->rooms as $r)<option value="{{ $r->id }}">{{ $r->labelText() }} — {{ $r->full_path }}</option>@endforeach
                 </select>
-                <label class="arah-muted" style="display:block; margin-top:.5rem">Kategori</label>
+                <div class="ac-pick-head">
+                    <label class="arah-muted">Kategori
+                        <span class="ac-pick-note">{{ $this->categories->count() }} kategori{{ ! $allCategories && ($floorId || count($roomIds)) ? ' yang ada di '.(count($roomIds) ? 'kamar' : 'lantai/gedung').' terpilih' : '' }}{{ count($categoryIds) ? ' · '.count($categoryIds).' dipilih' : '' }}</span></label>
+                    <span class="ac-pick-actions">
+                        @if (count($categoryIds))<button type="button" class="ac-pick-btn" wire:click="$set('categoryIds', [])">Kosongkan</button>@endif
+                        @if ($floorId || count($roomIds))<button type="button" class="ac-pick-btn" wire:click="$toggle('allCategories')">{{ $allCategories ? 'Sesuai lokasi' : 'Tampilkan semua' }}</button>@endif
+                    </span>
+                </div>
                 <select class="ac-input" multiple size="4" wire:model.live="categoryIds">
-                    @foreach ($this->categories as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach
+                    @foreach ($this->categories as $c)<option value="{{ $c->id }}">{{ $c->name }}@isset($c->scope_count) ({{ $c->scope_count }})@endisset</option>@endforeach
                 </select>
                 <label class="arah-muted" style="display:block; margin-top:.5rem">Batch generate</label>
                 <select class="ac-input" wire:model.live="generationBatchId">

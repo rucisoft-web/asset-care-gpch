@@ -381,3 +381,10 @@ a { text-underline-offset: 3px; }
 .st-berjalan .ac-guide-badge { background:rgba(181,127,20,.14); color:var(--k-kuning); }
 .ac-guide-act { display:flex; gap:.35rem; }
 @media (max-width: 640px) { .ac-guide-steps li { grid-template-columns: 2rem 1fr; } .ac-guide-act { grid-column: 2; } }
+
+/* Cetak label: judul daftar pilihan + tombol Tampilkan semua / Kosongkan */
+.ac-pick-head { display: flex; align-items: flex-end; justify-content: space-between; gap: .5rem; margin-top: .6rem; margin-bottom: .2rem; flex-wrap: wrap; }
+.ac-pick-note { display: block; font-size: .75rem; opacity: .8; }
+.ac-pick-actions { display: flex; gap: .35rem; }
+.ac-pick-btn { font-size: .75rem; font-weight: 600; padding: .2rem .6rem; border-radius: 999px; border: 1px solid var(--k-garis); background: var(--k-kartu); color: var(--k-hijau-gp); cursor: pointer; white-space: nowrap; }
+.ac-pick-btn:hover { border-color: var(--k-hijau-gp); }

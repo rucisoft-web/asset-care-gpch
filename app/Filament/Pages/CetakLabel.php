@@ -4,7 +4,9 @@ namespace App\Filament\Pages;
 
 use App\Filament\Resources\LabelPrintBatches\LabelPrintBatchResource;
 use App\Filament\Support\F;
+use App\Models\Asset;
 use App\Models\AssetCategory;
+use App\Models\AssetQuantityGroup;
 use App\Models\GenerationBatch;
 use App\Models\Location;
 use App\Services\LabelService;
@@ -31,6 +33,11 @@ class CetakLabel extends Page
     public ?int $floorId = null;
 
     public array $categoryIds = [];
+
+    /** Matikan penyaringan daftar kamar oleh lantai / kategori oleh lokasi. */
+    public bool $allRooms = false;
+
+    public bool $allCategories = false;
 
     public ?int $generationBatchId = null;
 
@@ -75,7 +82,8 @@ class CetakLabel extends Page
     protected function filters(): array
     {
         return array_filter([
-            'room_ids' => array_map('intval', $this->roomIds), 'floor_id' => $this->floorId, 'category_ids' => array_map('intval', $this->categoryIds),
+            // kamar dipilih → cetak kamar itu saja; lantai hanya menyaring daftar kamar
+            'room_ids' => array_map('intval', $this->roomIds), 'floor_id' => $this->roomIds ? null : $this->floorId, 'category_ids' => array_map('intval', $this->categoryIds),
             'generation_batch_id' => $this->generationBatchId, 'include_unverified' => $this->includeUnverified, 'include_groups' => $this->includeGroups,
             'print_state' => $this->printState, 'asset_ids' => array_values(array_filter(array_map('intval', explode(',', $this->assetIds)))),
         ], fn ($v) => $v !== null && $v !== [] && $v !== '');
@@ -114,9 +122,39 @@ class CetakLabel extends Page
         return app(LabelService::class)->layout($this->labels->count(), $this->profile, $this->startCell, $this->copies);
     }
 
+    /** Id lantai/gedung terpilih beserta semua turunannya; null bila belum memilih. */
+    protected function floorScopeIds(): ?array
+    {
+        if (! $this->floorId || ! ($floor = Location::find($this->floorId))) {
+            return null;
+        }
+
+        return Location::where('sort_key', 'like', $floor->sort_key.'/%')->pluck('id')->push($floor->id)->all();
+    }
+
+    /** Lokasi yang menentukan kategori: kamar terpilih (beserta turunannya), atau lantai terpilih. */
+    protected function categoryScopeIds(): ?array
+    {
+        $rooms = array_map('intval', $this->roomIds);
+        if ($rooms) {
+            $keys = Location::whereIn('id', $rooms)->pluck('sort_key');
+            $q = Location::query()->whereIn('id', $rooms);
+            foreach ($keys as $k) {
+                $q->orWhere('sort_key', 'like', $k.'/%');
+            }
+
+            return $q->pluck('id')->all();
+        }
+
+        return $this->floorScopeIds();
+    }
+
     public function getRoomsProperty()
     {
-        return Location::whereIn('location_type', ['room', 'venue', 'area'])->where('is_active', true)->orderBy('sort_key')->get();
+        $scope = $this->allRooms ? null : $this->floorScopeIds();
+
+        return Location::whereIn('location_type', ['room', 'venue', 'area'])->where('is_active', true)
+            ->when($scope !== null, fn ($q) => $q->whereIn('id', $scope))->orderBy('sort_key')->get();
     }
 
     public function getFloorsProperty()
@@ -124,9 +162,48 @@ class CetakLabel extends Page
         return Location::whereIn('location_type', ['building', 'zone', 'floor'])->orderBy('sort_key')->get();
     }
 
+    /** Kategori aktif; bila lantai/kamar dipilih, hanya kategori yang punya aset/kelompok jumlah di sana, dengan jumlah asetnya. */
     public function getCategoriesProperty()
     {
-        return AssetCategory::where('is_active', true)->orderBy('name')->get();
+        $scope = $this->allCategories ? null : $this->categoryScopeIds();
+        $q = AssetCategory::where('is_active', true)->orderBy('name');
+        if ($scope === null) {
+            return $q->get();
+        }
+        $assetCounts = Asset::whereIn('location_id', $scope)->selectRaw('category_id, count(*) as n')->groupBy('category_id')->pluck('n', 'category_id');
+        $groupCats = AssetQuantityGroup::whereIn('location_id', $scope)->distinct()->pluck('category_id');
+        $ids = $assetCounts->keys()->merge($groupCats)->unique()->all();
+
+        return $q->whereIn('id', $ids)->get()->each(fn ($c) => $c->setAttribute('scope_count', (int) ($assetCounts[$c->id] ?? 0)));
+    }
+
+    public function updatedFloorId(): void
+    {
+        $allowed = $this->rooms->pluck('id')->map(fn ($i) => (string) $i)->all();
+        $this->roomIds = array_values(array_filter($this->roomIds, fn ($id) => in_array((string) $id, $allowed, true)));
+        $this->pruneCategories();
+    }
+
+    public function updatedRoomIds(): void
+    {
+        $this->pruneCategories();
+    }
+
+    public function updatedAllRooms(): void
+    {
+        $this->updatedFloorId();
+    }
+
+    public function updatedAllCategories(): void
+    {
+        $this->pruneCategories();
+    }
+
+    /** Buang kategori terpilih yang tidak ada di lokasi yang sedang dipilih. */
+    protected function pruneCategories(): void
+    {
+        $allowed = $this->categories->pluck('id')->map(fn ($i) => (string) $i)->all();
+        $this->categoryIds = array_values(array_filter($this->categoryIds, fn ($id) => in_array((string) $id, $allowed, true)));
     }
 
     public function getBatchesProperty()
@@ -136,7 +213,7 @@ class CetakLabel extends Page
 
     public function resetFilters(): void
     {
-        $this->reset(['roomIds', 'floorId', 'categoryIds', 'generationBatchId', 'assetIds', 'includeUnverified', 'printState']);
+        $this->reset(['roomIds', 'floorId', 'categoryIds', 'allRooms', 'allCategories', 'generationBatchId', 'assetIds', 'includeUnverified', 'printState']);
     }
 
     public function generate(): void
