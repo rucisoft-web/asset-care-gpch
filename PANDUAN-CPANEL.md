@@ -224,6 +224,11 @@ Setiap label QR berisi alamat `ASSETCARE_QR_BASE_URL/q/...`. **Setelah label dic
 - Langkah awal PM: buka **Rencana PM → Buat dari interval kategori** (memakai interval PM bawaan tiap kategori), lalu sunting checklist dan PIC per rencana.
 - Tidak perlu cron baru; WO PM dibuat oleh `schedule:run` yang sudah terpasang.
 
+### Pembaruan 18 November 2026 (2): label Tom & Jerry No.103 & handheld scanner
+
+- Profil cetak baru **Tom & Jerry No.103 · 64 × 32 mm** (10 label per lembar, lembar ditempel di kertas A4). Atur posisi di Cetak label QR › Kalibrasi posisi label, lalu "Cetak lembar uji" di kertas HVS sebelum mencetak di lembar label.
+- Menu Lapangan: sakelar **Pakai handheld scanner** di layar Pasang label & Scan. Handheld diatur ke mode keyboard dengan akhiran Enter.
+
 ### Pembaruan 18 November 2026: prosedur pasang label & kode aset berbasis lokasi
 
 - Kode aset sekarang `LOKASI-JENIS-URUT`, mis. `MB-08-819-TV-01`. Perintah `bash deploy/deploy-cpanel.sh update` mengubah kode lama (`GPCH-AST-…`) secara otomatis; kode lama tetap bisa dicari. Bisa juga dijalankan manual: `php artisan assetcare:recode-assets --dry-run` (lihat contoh) lalu tanpa `--dry-run`.

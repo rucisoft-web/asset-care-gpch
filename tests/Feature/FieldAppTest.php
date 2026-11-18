@@ -108,6 +108,7 @@ class FieldAppTest extends TestCase
         $this->actingAs($u);
 
         $this->get(route('field.install', $room))->assertOk()->assertSee($asset->name);
+        $this->get(route('field.install', $room))->assertSee('Pakai handheld scanner')->assertSee('id="hh-in"', false);
         // label milik ruang lain ditolak
         $this->post(route('field.install.scan', $room), ['kode' => $other->activeLabel->url()])->assertRedirect(route('field.install', $room))->assertSessionHas('err');
         // label benar: tercatat terpasang lalu diarahkan ke form pengecekan

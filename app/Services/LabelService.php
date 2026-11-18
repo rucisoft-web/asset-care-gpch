@@ -111,9 +111,71 @@ class LabelService
     }
 
     /** Hitung tata letak lembar sebelum PDF dibuat. */
+    public const CALIBRATION_FIELDS = ['margin_left', 'margin_top', 'gap_x', 'gap_y', 'cols', 'rows'];
+
+    /** Profil media + kalibrasi tersimpan (geser posisi/jarak sesuai printer & lembar label yang dipakai). */
+    public static function profile(?string $key): array
+    {
+        $profiles = config('assetcare.label_profiles');
+        $key = isset($profiles[$key]) ? $key : 'a4-50x30';
+        $p = $profiles[$key];
+        $cal = json_decode((string) \App\Models\AppSetting::get('label_cal.'.$key, ''), true);
+        if (is_array($cal) && $p['type'] === 'a4') {
+            foreach (self::CALIBRATION_FIELDS as $f) {
+                if (isset($cal[$f]) && is_numeric($cal[$f])) {
+                    $p[$f] = in_array($f, ['cols', 'rows'], true) ? max(1, (int) $cal[$f]) : (float) $cal[$f];
+                }
+            }
+        }
+
+        return $p + ['key' => $key];
+    }
+
+    public static function saveCalibration(string $key, array $values, User $user): void
+    {
+        if (! $user->hasPermission('label.print')) {
+            throw WorkflowException::forbidden();
+        }
+        $base = config('assetcare.label_profiles.'.$key);
+        if (! $base || $base['type'] !== 'a4') {
+            throw WorkflowException::invalid('Profil ini tidak perlu kalibrasi.');
+        }
+        $clean = [];
+        foreach (self::CALIBRATION_FIELDS as $f) {
+            if (isset($values[$f]) && is_numeric($values[$f])) {
+                $v = (float) $values[$f];
+                $clean[$f] = in_array($f, ['cols', 'rows'], true) ? max(1, min(12, (int) $v)) : max(0, min(150, round($v, 1)));
+            }
+        }
+        // label harus muat di kertas
+        $p = array_merge($base, $clean);
+        if ($p['margin_left'] + $p['cols'] * $p['label_w'] + ($p['cols'] - 1) * $p['gap_x'] > $p['page_w'] + 0.01
+            || $p['margin_top'] + $p['rows'] * $p['label_h'] + ($p['rows'] - 1) * $p['gap_y'] > $p['page_h'] + 0.01) {
+            throw WorkflowException::invalid('Ukuran melebihi kertas. Kurangi margin, jarak, atau jumlah kolom/baris.');
+        }
+        \App\Models\AppSetting::put(['label_cal.'.$key => json_encode($clean)], $user->id);
+    }
+
+    /** PDF lembar uji: garis tiap label + contoh isi, dicetak di kertas biasa lalu ditumpuk dengan lembar label. */
+    public function testSheet(string $key): \Barryvdh\DomPDF\PDF
+    {
+        $p = self::profile($key);
+        $per = $p['cols'] * $p['rows'];
+        $qr = 'data:image/png;base64,'.base64_encode($this->qrPng(url('/q/CONTOH-UJI-LABEL-QR-0000')));
+        $items = collect(range(1, $per))->map(fn ($n) => ['qr' => $qr, 'item' => (object) [
+            'cell_no' => $n, 'sequence' => $n, 'code_snapshot' => 'MB-08-819-TV-0'.(($n - 1) % 9 + 1),
+            'name_snapshot' => 'Contoh label sel '.$n, 'location_snapshot' => 'Kamar 819 · Lt 8',
+        ]]);
+        $batch = (object) ['number' => 'UJI-'.strtoupper($key)];
+
+        return Pdf::loadView('labels.pdf', ['batch' => $batch, 'p' => $p, 'sheets' => collect([1 => $items]), 'guides' => true, 'test' => true])
+            ->setPaper([0, 0, $p['page_w'] * 72 / 25.4, $p['page_h'] * 72 / 25.4])
+            ->setOption(['dpi' => 300, 'isRemoteEnabled' => false, 'defaultFont' => 'DejaVu Sans']);
+    }
+
     public function layout(int $count, string $profileKey, int $startCell = 1, int $copies = 1): array
     {
-        $p = config('assetcare.label_profiles.'.$profileKey);
+        $p = self::profile($profileKey);
         $per = max(1, $p['cols'] * $p['rows']);
         $start = $p['type'] === 'a4' ? max(1, min($startCell, $per)) : 1;
         $total = $count * max(1, $copies);

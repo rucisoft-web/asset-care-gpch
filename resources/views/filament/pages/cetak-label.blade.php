@@ -51,6 +51,24 @@
                 <div><label class="arah-muted">Salinan per label</label>
                     <input type="number" min="1" max="5" class="ac-input" wire:model.live.debounce.400ms="copies"></div>
             </div>
+            @if ($cal)
+            <details style="margin-top:.7rem" @if (($profiles[$profile]['carrier'] ?? false)) open @endif>
+                <summary style="cursor:pointer; font-weight:600">Kalibrasi posisi label (mm)</summary>
+                <p class="arah-muted" style="margin:.4rem 0">Jarak dari tepi kiri/atas kertas A4 ke label pertama, dan jarak antar-label. Ukur lembar label dengan penggaris, isi, simpan, lalu cetak lembar uji di kertas biasa dan tumpuk dengan lembar label.</p>
+                <div class="arah-grid arah-grid-3">
+                    <div><label class="arah-muted">Dari kiri</label><input type="number" step="0.5" class="ac-input" wire:model="cal.margin_left"></div>
+                    <div><label class="arah-muted">Dari atas</label><input type="number" step="0.5" class="ac-input" wire:model="cal.margin_top"></div>
+                    <div><label class="arah-muted">Kolom × baris</label><div style="display:flex; gap:.3rem"><input type="number" min="1" class="ac-input" wire:model="cal.cols"><input type="number" min="1" class="ac-input" wire:model="cal.rows"></div></div>
+                    <div><label class="arah-muted">Jarak antar-kolom</label><input type="number" step="0.5" class="ac-input" wire:model="cal.gap_x"></div>
+                    <div><label class="arah-muted">Jarak antar-baris</label><input type="number" step="0.5" class="ac-input" wire:model="cal.gap_y"></div>
+                </div>
+                <div class="ac-actions" style="margin-top:.5rem">
+                    <button type="button" class="arah-btn arah-btn-primary" wire:click="saveCal">Simpan kalibrasi</button>
+                    <a class="arah-btn" href="{{ route('labels.test', $profile) }}" target="_blank">Cetak lembar uji</a>
+                    <button type="button" class="arah-btn" wire:click="resetCal">Kembalikan bawaan</button>
+                </div>
+            </details>
+            @endif
             <div class="arah-kamasan" style="margin:.8rem 0"></div>
             <div class="arah-grid arah-grid-3">
                 <div class="arah-stat"><span class="label">Label</span><span class="value">{{ $lay['labels'] }}</span><span class="sub">{{ $labels->count() }} aset/kelompok</span></div>

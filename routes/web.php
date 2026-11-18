@@ -19,6 +19,7 @@ Route::get('/q/{token}', [QrController::class, 'show'])->where('token', '[A-Za-z
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/labels/{batch}/pdf', [LabelPdfController::class, 'show'])->name('labels.pdf');
+    Route::get('/labels/uji/{profile}', [LabelPdfController::class, 'test'])->name('labels.test');
     Route::get('/attachments/{attachment}', [AttachmentController::class, 'show'])->name('attachments.show');
     Route::get('/assets/{asset}/photo', [AttachmentController::class, 'assetPhoto'])->name('assets.photo');
     Route::get('/bantuan/{key}', [HelpController::class, 'show'])->where('key', '[a-z0-9.\-]+')->name('help.show');

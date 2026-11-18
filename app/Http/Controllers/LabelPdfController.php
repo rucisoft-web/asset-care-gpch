@@ -19,4 +19,12 @@ class LabelPdfController extends Controller
 
         return $pdf->stream($batch->number.($guides ? '-uji' : '').'.pdf');
     }
+
+    public function test(Request $request, string $profile, LabelService $labels)
+    {
+        abort_unless($request->user()->hasPermission('label.print'), 403);
+        abort_unless(config('assetcare.label_profiles.'.$profile), 404);
+
+        return $labels->testSheet($profile)->stream('lembar-uji-'.$profile.'.pdf');
+    }
 }

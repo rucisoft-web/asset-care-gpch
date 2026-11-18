@@ -42,7 +42,10 @@ class CetakLabel extends Page
 
     public string $printState = 'all';
 
-    public string $profile = 'a4-50x30';
+    public string $profile = 'tj-103';
+
+    /** Kalibrasi posisi untuk profil lembar (A4 / Tom & Jerry). */
+    public array $cal = [];
 
     public int $startCell = 1;
 
@@ -57,6 +60,7 @@ class CetakLabel extends Page
 
     public function mount(): void
     {
+        $this->loadCal();
         $this->assetIds = (string) request('assets', '');
         if ($b = request()->integer('batch')) {
             $this->generationBatchId = $b;
@@ -75,6 +79,29 @@ class CetakLabel extends Page
             'generation_batch_id' => $this->generationBatchId, 'include_unverified' => $this->includeUnverified, 'include_groups' => $this->includeGroups,
             'print_state' => $this->printState, 'asset_ids' => array_values(array_filter(array_map('intval', explode(',', $this->assetIds)))),
         ], fn ($v) => $v !== null && $v !== [] && $v !== '');
+    }
+
+    public function updatedProfile(): void
+    {
+        $this->loadCal();
+    }
+
+    protected function loadCal(): void
+    {
+        $p = LabelService::profile($this->profile);
+        $this->cal = $p['type'] === 'a4' ? array_intersect_key($p, array_flip(LabelService::CALIBRATION_FIELDS)) : [];
+    }
+
+    public function saveCal(): void
+    {
+        F::attempt(fn () => LabelService::saveCalibration($this->profile, $this->cal, auth()->user()), 'Kalibrasi disimpan. Cetak lembar uji untuk memeriksa.');
+        $this->loadCal();
+    }
+
+    public function resetCal(): void
+    {
+        F::attempt(fn () => \App\Models\AppSetting::put(['label_cal.'.$this->profile => null], auth()->id()), 'Kalibrasi dikembalikan ke bawaan.');
+        $this->loadCal();
     }
 
     public function getLabelsProperty(): Collection

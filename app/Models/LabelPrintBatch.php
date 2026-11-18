@@ -39,6 +39,6 @@ class LabelPrintBatch extends Model
 
     public function profile(): array
     {
-        return config('assetcare.label_profiles.'.$this->media_profile, config('assetcare.label_profiles.a4-50x30'));
+        return \App\Services\LabelService::profile($this->media_profile);
     }
 }
