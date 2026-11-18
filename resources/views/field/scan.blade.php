@@ -5,7 +5,7 @@
 @include('field._scanner')
 <form class="card" method="get" action="{{ route('field.resolve') }}">
     <label style="margin-top:0">Atau ketik kode aset</label>
-    <input type="text" name="kode" placeholder="{{ app(\App\Support\CurrentProperty::class)->get()?->code ?? 'GPCH' }}-AST-000123" autocapitalize="characters">
+    <input type="text" name="kode" placeholder="MB-08-819-TV-01" autocapitalize="characters">
     <button class="btn" style="margin-top:10px">Buka</button>
 </form>
 @endsection

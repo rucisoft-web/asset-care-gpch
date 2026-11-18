@@ -21,5 +21,6 @@
         <button class="btn" style="margin-top:14px">Simpan kata sandi</button>
     </form>
 </div>
+<a class="big" href="{{ route('field.guide') }}"><span class="ic">?</span><span><b>Panduan petugas</b><span class="muted">Langkah pasang label & identifikasi, dengan gambar</span></span></a>
 <form method="post" action="{{ route('field.logout') }}">@csrf<button class="btn alt">Keluar</button></form>
 @endsection

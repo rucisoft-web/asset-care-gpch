@@ -11,6 +11,7 @@
             <aside class="ac-help-panel" role="dialog" aria-label="Bantuan" x-show="open" x-transition:enter="ac-help-in" x-transition:leave="ac-help-out">
                 <div class="ac-help-head">
                     <span>Bantuan</span>
+                    <a href="{{ \App\Filament\Pages\PanduanPeran::getUrl() }}" class="ac-help-role">Panduan per peran ›</a>
                     <button type="button" x-on:click="open = false" aria-label="Tutup">✕</button>
                 </div>
                 <div class="ac-help-scroll">

@@ -3,7 +3,7 @@
 @section('heading', 'Cari aset atau kamar')
 @section('content')
 <form method="get" action="{{ route('field.search') }}" class="card">
-    <input type="search" name="q" value="{{ $q }}" placeholder="mis. 801, AC, GPCH-AST-000123" autofocus>
+    <input type="search" name="q" value="{{ $q }}" placeholder="mis. 801, AC, MB-08-819-TV-01" autofocus>
     <button class="btn" style="margin-top:10px">Cari</button>
 </form>
 @if ($rooms->isNotEmpty())

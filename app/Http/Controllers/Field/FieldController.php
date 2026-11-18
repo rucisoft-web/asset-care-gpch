@@ -106,6 +106,11 @@ class FieldController extends Controller
     }
 
     // ---------------- scan ----------------
+    public function guide(): View
+    {
+        return view('field.guide', ['g' => \App\Support\Help\RoleGuide::get('field-officer')]);
+    }
+
     public function scan(): View
     {
         return view('field.scan');

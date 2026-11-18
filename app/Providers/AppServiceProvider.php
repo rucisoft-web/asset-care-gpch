@@ -33,10 +33,12 @@ class AppServiceProvider extends ServiceProvider
         \Filament\Forms\Components\DateTimePicker::configureUsing(fn ($c) => $c->native(false)->displayFormat('d/m/Y H:i')->seconds(false));
         \Filament\Tables\Table::configureUsing(fn ($t) => $t->defaultPaginationPageOption(25)->striped());
 
+        // versi = isi file, agar browser/CDN langsung memakai CSS/JS terbaru setelah pembaruan (bukan versi lama dari cache)
+        $v = fn (string $f) => asset($f).'?v='.substr((string) @md5_file(public_path($f)), 0, 10);
         FilamentAsset::register([
-            Css::make('asset-care-gpch', asset('css/assetcare.css').'?v=2'),
-            Js::make('jsqr', asset('js/vendor/jsQR.js').'?v=1.4.0'),
-            Js::make('asset-care-scan', asset('js/assetcare-scan.js').'?v=1'),
+            Css::make('asset-care-gpch', $v('css/assetcare.css')),
+            Js::make('jsqr', $v('js/vendor/jsQR.js')),
+            Js::make('asset-care-scan', $v('js/assetcare-scan.js')),
         ]);
 
         Password::defaults(fn () => Password::min(10)->letters()->numbers());

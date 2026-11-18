@@ -35,6 +35,7 @@ Route::prefix('lapangan')->name('field.')->controller(\App\Http\Controllers\Fiel
         Route::post('/sandi', 'passwordSave')->name('password.save');
         Route::get('/', 'home')->name('home');
         Route::get('/scan', 'scan')->name('scan');
+        Route::get('/panduan', 'guide')->name('guide');
         Route::get('/buka', 'resolve')->name('resolve');
         Route::get('/lokasi/{location?}', 'location')->name('location');
         Route::get('/cari', 'search')->name('search');
