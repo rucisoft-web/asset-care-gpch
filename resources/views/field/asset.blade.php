@@ -2,7 +2,7 @@
 @section('title', $asset->asset_code)
 @section('heading', $asset->name)
 @section('sub', $asset->asset_code)
-@section('back', $asset->location_id ? route('field.location', $asset->location_id) : route('field.home'))
+@section('back', $asset->location_id ? (request()->boolean('pasang') ? route('field.install', $asset->location_id) : route('field.location', $asset->location_id)) : route('field.home'))
 @section('content')
 <div class="card">
     @if ($asset->mainPhotoUrl())<img class="photo" src="{{ $asset->mainPhotoUrl() }}" alt="Foto aset">@endif
@@ -10,11 +10,13 @@
         <dt>Lokasi</dt><dd>{{ $asset->location?->full_path ?? '—' }}</dd>
         <dt>Kategori</dt><dd>{{ $asset->category?->name }}</dd>
         <dt>Status</dt><dd>@include('field._status', ['a' => $asset]) @if ($asset->verified_at)<span class="muted">{{ $asset->verifier?->name }}, {{ \App\Support\Fmt::dt($asset->verified_at) }}</span>@endif</dd>
+        <dt>Label QR</dt><dd>{{ \App\Models\InstallationEvent::STATUSES[$asset->installation_status ?? 'pending'] ?? $asset->installation_status }}</dd>
         @if ($asset->legacy_code)<dt>Kode lama</dt><dd>{{ $asset->legacy_code }}</dd>@endif
     </dl>
 </div>
 <form method="post" action="{{ route('field.identify', $asset) }}" enctype="multipart/form-data" class="card" id="f">
     @csrf
+    @if (request()->boolean('pasang') || old('pasang'))<input type="hidden" name="pasang" value="1">@endif
     <b>Hasil pengecekan</b>
     <label>Aset ada di lokasi ini?</label>
     <div class="seg two">

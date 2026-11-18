@@ -49,11 +49,20 @@ class QrResolver
 
             return $a ? ['type' => 'asset', 'asset' => $a, 'label' => $a->activeLabel] : ['type' => 'unknown', 'message' => 'Kode aset tidak ditemukan.'];
         }
+        // kode aset berbasis lokasi (mis. MB-08-819-TV-01), termasuk kode lama yang sudah diganti
+        if (preg_match('/^[A-Za-z0-9][A-Za-z0-9-]{3,49}$/', $input)) {
+            $code = strtoupper($input);
+            $a = Asset::where('asset_code', $code)->first()
+                ?? Asset::where('former_codes', 'like', '%'.$code.'%')->get()->first(fn ($x) => in_array($code, explode(';', (string) $x->former_codes), true));
+            if ($a) {
+                return ['type' => 'asset', 'asset' => $a, 'label' => $a->activeLabel];
+            }
+        }
         if (preg_match('/^[A-Za-z0-9_-]{20,64}$/', $input)) {
             return $this->fromToken($input);
         }
 
-        return ['type' => 'invalid', 'message' => 'Masukkan URL label, atau kode aset seperti '.(app(\App\Support\CurrentProperty::class)->get()?->code ?? 'XXX').'-AST-000001.'];
+        return ['type' => 'invalid', 'message' => 'Kode tidak ditemukan. Masukkan URL label atau kode aset seperti MB-08-819-TV-01.'];
     }
 
     public function fromToken(string $token): array

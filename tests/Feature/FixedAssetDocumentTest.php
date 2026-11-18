@@ -205,7 +205,7 @@ class FixedAssetDocumentTest extends TestCase
 
         // klik gedung → aset di semua sub-lokasinya ikut
         \Livewire\Livewire::test(\App\Filament\Pages\PetaAset::class)
-            ->call('pickLocation', $building->id)->assertSee('GPCH-AST-')->assertSee($genset->name)
+            ->call('pickLocation', $building->id)->assertSee($genset->asset_code)->assertSee($genset->name)
             ->call('pickLocation', $genset->location_id)->assertSee($genset->name)->assertDontSee('Projector Malibu Dome');
 
         // klik jenis → di lokasi mana saja

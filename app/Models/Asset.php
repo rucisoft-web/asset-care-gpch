@@ -57,10 +57,32 @@ class Asset extends Model
     protected static function booted(): void
     {
         static::creating(function (Asset $a) {
-            $a->asset_code ??= Sequence::assetCode($a->property_id);
+            $a->asset_code ??= \App\Support\AssetCode::next($a) ?? Sequence::assetCode($a->property_id);
             $a->created_by ??= Auth::id();
             $cat = $a->category_id ? AssetCategory::withoutGlobalScopes()->find($a->category_id) : null;
             $a->criticality ??= $cat?->default_criticality;
+        });
+        // pindah lokasi / ganti jenis → kode ikut berubah; kode lama tetap tercatat & bisa dicari
+        static::updating(function (Asset $a) {
+            if ($a->isDirty('location_id') || $a->isDirty('category_id')) {
+                $prefix = \App\Support\AssetCode::prefix($a->location_id, $a->category_id);
+                if ($prefix && ! str_starts_with((string) $a->asset_code, $prefix.'-')) {
+                    $old = $a->getOriginal('asset_code');
+                    $a->asset_code = \App\Support\AssetCode::next($a);
+                    $a->former_codes = \App\Support\AssetCode::appendFormer($a->former_codes, $old);
+                }
+            }
+        });
+        static::updated(function (Asset $a) {
+            if ($a->wasChanged('asset_code') && ($label = $a->activeLabel) && ($last = $label->printItems()->latest('id')->first())
+                && $last->code_snapshot !== $a->asset_code && $label->currentInstallationStatus() !== 'needs_relabel') {
+                InstallationEvent::create([
+                    'asset_label_id' => $label->id, 'asset_id' => $a->id, 'location_id' => $a->location_id, 'print_item_id' => $last->id,
+                    'status' => 'needs_relabel', 'note' => 'Kode aset berubah: label tertulis "'.$last->code_snapshot.'", sekarang "'.$a->asset_code.'"',
+                    'actor_id' => Auth::id(), 'occurred_at' => now(),
+                ]);
+                app(\App\Services\LabelService::class)->syncInstallStatus($label);
+            }
         });
         static::saving(function (Asset $a) {
             $a->guardHierarchy();

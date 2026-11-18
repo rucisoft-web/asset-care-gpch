@@ -44,7 +44,8 @@
                 <img class="qr" src="{{ $c['qr'] }}" alt="">
                 <div class="txt">
                     <div class="brand">{{ $brand }}</div>
-                    <div class="code">{{ $i->code_snapshot }}</div>
+                    @php $len = mb_strlen($i->code_snapshot); @endphp
+                    <div class="code" style="{{ $len > 14 ? 'font-size:'.($big ? ($len > 22 ? 7 : 8.2) : ($len > 22 ? 5 : 5.8)).'pt;word-break:break-all;line-height:1.1' : '' }}">{{ $i->code_snapshot }}</div>
                     <div class="name">{{ \Illuminate\Support\Str::limit($i->name_snapshot, $big ? 60 : 38) }}</div>
                     @if ($i->location_snapshot)<div class="loc">{{ \Illuminate\Support\Str::limit($i->location_snapshot, 28) }}</div>@endif
                     <div class="foot">Scan untuk info &amp; lapor kerusakan</div>

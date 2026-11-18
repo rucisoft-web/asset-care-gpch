@@ -54,6 +54,9 @@
         @endforeach
     </div>
     @endif
+    @if ($assets->isNotEmpty() || $groups->isNotEmpty())
+    <a class="btn" href="{{ route('field.install', $location) }}" style="margin-bottom:10px">Pasang label QR di {{ $location->name }}</a>
+    @endif
     @if (in_array($location->location_type, ['room', 'area', 'venue', 'point']) || $assets->isNotEmpty())
     <a class="btn alt" href="{{ route('field.new', $location) }}">+ Ada aset yang belum terdaftar</a>
     @endif

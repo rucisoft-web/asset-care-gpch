@@ -40,6 +40,9 @@ Route::prefix('lapangan')->name('field.')->controller(\App\Http\Controllers\Fiel
         Route::get('/cari', 'search')->name('search');
         Route::get('/aset/{asset}', 'asset')->name('asset');
         Route::post('/aset/{asset}', 'identify')->name('identify');
+        Route::get('/lokasi/{location}/pasang', 'install')->name('install');
+        Route::post('/lokasi/{location}/pasang', 'installScan')->name('install.scan');
+        Route::post('/lokasi/{location}/pasang/{label}', 'installMark')->name('install.mark');
         Route::get('/lokasi/{location}/temuan', 'newForm')->name('new');
         Route::post('/lokasi/{location}/temuan', 'newSave')->name('new.save');
         Route::get('/kelompok/{group}', 'group')->name('group');

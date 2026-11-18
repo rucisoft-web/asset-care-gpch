@@ -8,8 +8,11 @@ use App\Models\AssetCategory;
 use App\Models\AssetLabel;
 use App\Models\AssetQuantityGroup;
 use App\Models\Attachment;
+use App\Models\InstallationEvent;
 use App\Models\Location;
 use App\Services\AssetService;
+use App\Services\InstallationService;
+use App\Services\LabelService;
 use App\Services\QrResolver;
 use App\Services\WorkflowException;
 use App\Support\Fmt;
@@ -155,7 +158,7 @@ class FieldController extends Controller
         if (mb_strlen($q) >= 2) {
             $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $q).'%';
             $assets = Asset::whereIn('lifecycle_status', ['draft', 'active'])
-                ->where(fn ($w) => $w->where('asset_code', 'like', $like)->orWhere('name', 'like', $like)->orWhere('serial_number', 'like', $like)->orWhere('legacy_code', 'like', $like))
+                ->where(fn ($w) => $w->where('asset_code', 'like', $like)->orWhere('name', 'like', $like)->orWhere('serial_number', 'like', $like)->orWhere('legacy_code', 'like', $like)->orWhere('former_codes', 'like', $like))
                 ->with('location')->orderBy('name')->limit(40)->get();
             $rooms = Location::where('is_active', true)->where(fn ($w) => $w->where('name', 'like', $like)->orWhere('code', 'like', $like)->orWhere('room_ref', 'like', $like))
                 ->orderBy('sort_key')->limit(15)->get();
@@ -216,6 +219,9 @@ class FieldController extends Controller
             return back()->withErrors(['found' => $e->getMessage()])->withInput();
         }
 
+        if ($request->boolean('pasang') && $asset->location_id) {
+            return redirect()->route('field.install', $asset->location_id)->with('ok', $asset->asset_code.' tersimpan. Scan label berikutnya.');
+        }
         $next = $this->nextUnverified($asset->fresh());
 
         return $next
@@ -276,7 +282,67 @@ class FieldController extends Controller
         }
         $group->recordCount((float) $d['qty'], trim('Hitung lapangan. '.($d['reason'] ?? '')));
 
+        if ($request->boolean('pasang')) {
+            return redirect()->route('field.install', $group->location_id)->with('ok', $group->name.': '.Fmt::num($d['qty'], 0).' tercatat. Scan label berikutnya.');
+        }
+
         return redirect()->route('field.location', $group->location_id)->with('ok', $group->name.': '.Fmt::num($d['qty'], 0).' tercatat.');
+    }
+
+    // ---------------- pasang label QR (per ruang) ----------------
+    /** Daftar label yang harus ditempel di ruang ini + pemindai untuk konfirmasi pemasangan. */
+    public function install(Location $location, LabelService $labels): View
+    {
+        $items = $labels->select(['room_ids' => [$location->id], 'include_unverified' => true, 'include_groups' => true])
+            ->filter(fn (AssetLabel $l) => (int) ($l->asset?->location_id ?? $l->quantityGroup?->location_id) === (int) $location->id)->values();
+        $done = $items->filter(fn (AssetLabel $l) => $l->currentInstallationStatus() === 'installed')->count();
+
+        return view('field.install', ['location' => $location, 'items' => $items, 'done' => $done, 'trail' => $this->trail($location)]);
+    }
+
+    /** Hasil scan di mode pasang: catat terpasang (dicek harus milik ruang ini), lalu buka form pengecekan aset. */
+    public function installScan(Request $request, Location $location, InstallationService $svc): RedirectResponse
+    {
+        $kode = mb_substr(trim((string) $request->input('kode')), 0, 500);
+        if ($kode === '') {
+            return back()->with('err', 'Kode kosong.');
+        }
+        try {
+            $r = $svc->confirm($location, $kode, $request->user());
+        } catch (WorkflowException $e) {
+            return back()->with('err', $e->getMessage());
+        }
+        if (! $r['ok']) {
+            return redirect()->route('field.install', $location)->with('err', $r['message']);
+        }
+        $label = $r['event']->label ?? (app(QrResolver::class)->resolve($kode)['label'] ?? null);
+        $asset = $label?->asset;
+        if ($asset && $asset->verification_status !== 'verified') {
+            return redirect()->route('field.asset', [$asset, 'pasang' => 1])->with('ok', 'Label terpasang. Sekarang periksa kondisi aset, ambil foto, lalu simpan.');
+        }
+        if ($label?->quantityGroup && $label->quantityGroup->on_hand === null) {
+            return redirect()->route('field.group', [$label->quantityGroup, 'pasang' => 1])->with('ok', 'Label terpasang. Hitung jumlahnya lalu simpan.');
+        }
+
+        return redirect()->route('field.install', $location)->with('ok', $r['message']);
+    }
+
+    /** Label tidak bisa dipasang: rusak, hilang, atau perlu dicetak ulang. Masuk antrean cetak ulang di ruang IT. */
+    public function installMark(Request $request, Location $location, AssetLabel $label, LabelService $labels): RedirectResponse
+    {
+        $d = $request->validate(['status' => 'required|in:damaged,missing,needs_relabel', 'note' => 'nullable|string|max:300']);
+        $target = $label->asset ?? $label->quantityGroup;
+        if (! $target || (int) $target->location_id !== (int) $location->id) {
+            abort(404);
+        }
+        InstallationEvent::create([
+            'asset_label_id' => $label->id, 'asset_id' => $label->asset_id, 'quantity_group_id' => $label->quantity_group_id,
+            'location_id' => $location->id, 'status' => $d['status'], 'note' => trim('Lapangan. '.($d['note'] ?? '')),
+            'actor_id' => $request->user()->id, 'occurred_at' => now(),
+        ]);
+        $labels->syncInstallStatus($label);
+
+        return redirect()->route('field.install', $location)->with('ok', ($target->asset_code ?? $target->group_code).': '.InstallationEvent::STATUSES[$d['status']].'. Label akan masuk daftar cetak ulang.');
     }
 
     // ---------------- bantu ----------------

@@ -31,7 +31,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\HtmlString;
 
-/** M02 Register aset: satu aset individual = satu unit fisik. Kode permanen dibuat server. */
+/** M02 Register aset: satu aset individual = satu unit fisik. Kode = lokasi-jenis-urut (mis. MB-08-819-TV-01), dibuat server; kode lama disimpan di former_codes. */
 class AssetResource extends Resource
 {
     use HasPermissions;
@@ -63,7 +63,7 @@ class AssetResource extends Resource
         return $schema->columns(1)->components([
             Tabs::make('aset')->persistTabInQueryString()->tabs([
                 Tab::make('Identitas')->columns(3)->schema([
-                    Placeholder::make('asset_code_view')->label('Kode aset')->content(fn ($record) => $record?->asset_code ?? 'Dibuat otomatis saat disimpan ('.(app(\App\Support\CurrentProperty::class)->get()?->code ?? 'XXX').'-AST-xxxxxx)'),
+                    Placeholder::make('asset_code_view')->label('Kode aset')->content(fn ($record) => $record?->asset_code ?? 'Dibuat otomatis saat disimpan: LOKASI-JENIS-URUT, mis. MB-08-819-TV-01'),
                     TextInput::make('name')->label('Nama aset')->required()->columnSpan(2),
                     Select::make('category_id')->label('Kategori')->required()->native(false)->searchable()
                         ->options(fn () => AssetCategory::where('is_active', true)->where('tracking_mode', 'individual')->orderBy('name')->pluck('name', 'id')),
@@ -151,7 +151,8 @@ class AssetResource extends Resource
         return $table
             ->modifyQueryUsing(fn ($query) => $query->with('location', 'category'))
             ->columns([
-                TextColumn::make('asset_code')->label('Kode')->fontFamily('mono')->searchable()->sortable()->copyable(),
+                TextColumn::make('asset_code')->label('Kode')->fontFamily('mono')->searchable(['asset_code', 'former_codes'])->sortable()->copyable()
+                    ->description(fn (Asset $r) => $r->former_codes ? 'dulu: '.str_replace(';', ', ', $r->former_codes) : null),
                 TextColumn::make('name')->label('Nama')->searchable(['name', 'serial_number', 'legacy_code', 'brand', 'model'])->wrap()
                     ->description(fn ($record) => trim(($record->brand ? $record->brand.' ' : '').($record->model ?? '').($record->serial_number ? ' · SN '.$record->serial_number : ''))),
                 TextColumn::make('category.name')->label('Kategori')->toggleable(),

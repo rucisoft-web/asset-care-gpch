@@ -76,6 +76,8 @@ case "$MODE" in
       echo "» Template kamar & aset tetap per kamar"
       $ART assetcare:import-room-templates "$TK" --generate
     fi
+    echo "» Kode aset berbasis lokasi & jenis (mis. MB-08-819-TV-01)"
+    $ART assetcare:recode-assets
     echo ""
     echo "  Login: admin@assetcare.local / AssetCare@GPCH2026 (wajib diganti saat login pertama)"
     ;;
@@ -84,6 +86,7 @@ case "$MODE" in
     $ART migrate --force
     $ART db:seed --class=Database\\Seeders\\ReferenceSeeder --force
     $ART assetcare:labels-ensure
+    $ART assetcare:recode-assets
     ;;
   *) echo "Mode tidak dikenal: $MODE (install | install-data | seed | update)"; exit 1 ;;
 esac

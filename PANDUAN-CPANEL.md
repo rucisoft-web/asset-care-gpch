@@ -224,6 +224,11 @@ Setiap label QR berisi alamat `ASSETCARE_QR_BASE_URL/q/...`. **Setelah label dic
 - Langkah awal PM: buka **Rencana PM → Buat dari interval kategori** (memakai interval PM bawaan tiap kategori), lalu sunting checklist dan PIC per rencana.
 - Tidak perlu cron baru; WO PM dibuat oleh `schedule:run` yang sudah terpasang.
 
+### Pembaruan 18 November 2026: prosedur pasang label & kode aset berbasis lokasi
+
+- Kode aset sekarang `LOKASI-JENIS-URUT`, mis. `MB-08-819-TV-01`. Perintah `bash deploy/deploy-cpanel.sh update` mengubah kode lama (`GPCH-AST-…`) secara otomatis; kode lama tetap bisa dicari. Bisa juga dijalankan manual: `php artisan assetcare:recode-assets --dry-run` (lihat contoh) lalu tanpa `--dry-run`.
+- Alur label: Cetak label QR per lantai/kamar (ruang IT, peran baru **Staf Cetak Label (IT)**) → petugas membuka kamar di `/lapangan` → **Pasang label QR** → scan tiap label (label milik ruang lain ditolak) → isi kondisi & foto → Asset Controller menyetujui di **Pengendalian Aset › Persetujuan hasil lapangan**. Penyetuju harus berbeda dari petugas yang memeriksa.
+
 ### Pembaruan 17 November 2026: menu Lapangan untuk petugas identifikasi aset
 
 - Peran baru **Petugas Identifikasi Aset** (`field-officer`). Petugas dengan peran ini login di `https://<domain>/lapangan` lewat ponsel dan hanya melihat menu Lapangan: Beranda (progres), Lokasi (gedung > lantai > kamar), Scan QR, Cari, dan Akun. Bila mereka membuka `/admin`, otomatis dialihkan ke `/lapangan`.

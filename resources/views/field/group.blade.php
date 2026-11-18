@@ -14,6 +14,7 @@
 </div>
 <form method="post" action="{{ route('field.group.count', $group) }}" class="card">
     @csrf
+    @if (request()->boolean('pasang') || old('pasang'))<input type="hidden" name="pasang" value="1">@endif
     <label for="qty" style="margin-top:0">Jumlah aktual ({{ $group->unit }})</label>
     <input id="qty" type="number" name="qty" inputmode="numeric" min="0" step="1" value="{{ old('qty') }}" required>
     @error('qty')<div class="err-t">{{ $message }}</div>@enderror

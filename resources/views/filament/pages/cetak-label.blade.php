@@ -37,7 +37,7 @@
                 <option value="never_printed">Belum pernah dicetak</option>
                 <option value="not_installed">Belum terpasang</option>
             </select>
-            <label style="display:flex; gap:.4rem; margin-top:.6rem; font-size:.85rem"><input type="checkbox" wire:model.live="includeUnverified"> Sertakan kandidat belum terverifikasi</label>
+            <label style="display:flex; gap:.4rem; margin-top:.6rem; font-size:.85rem"><input type="checkbox" wire:model.live="includeUnverified"> Sertakan aset yang belum dicek di lapangan (biarkan dicentang untuk alur cetak → tempel → scan)</label>
             <label style="display:flex; gap:.4rem; font-size:.85rem"><input type="checkbox" wire:model.live="includeGroups"> Sertakan kelompok jumlah</label>
         </div>
         <div class="arah-card">

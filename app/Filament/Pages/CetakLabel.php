@@ -36,7 +36,7 @@ class CetakLabel extends Page
 
     public string $assetIds = '';
 
-    public bool $includeUnverified = false;
+    public bool $includeUnverified = true;
 
     public bool $includeGroups = true;
 

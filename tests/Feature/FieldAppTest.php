@@ -98,4 +98,42 @@ class FieldAppTest extends TestCase
         $this->post(route('field.group.count', $g), ['qty' => 3, 'reason' => 'Satu di laundry'])->assertRedirect();
         $this->assertEquals(3, (float) $g->fresh()->on_hand);
     }
+
+    public function test_install_label_by_scan_then_supervisor_approves(): void
+    {
+        $u = $this->officer();
+        $asset = Asset::whereNotNull('location_id')->where('verification_status', 'unverified')->whereHas('activeLabel')->firstOrFail();
+        $room = Location::findOrFail($asset->location_id);
+        $other = Asset::whereNotNull('location_id')->where('location_id', '!=', $room->id)->whereHas('activeLabel')->firstOrFail();
+        $this->actingAs($u);
+
+        $this->get(route('field.install', $room))->assertOk()->assertSee($asset->name);
+        // label milik ruang lain ditolak
+        $this->post(route('field.install.scan', $room), ['kode' => $other->activeLabel->url()])->assertRedirect(route('field.install', $room))->assertSessionHas('err');
+        // label benar: tercatat terpasang lalu diarahkan ke form pengecekan
+        $this->post(route('field.install.scan', $room), ['kode' => $asset->activeLabel->url()])->assertRedirect(route('field.asset', [$asset, 'pasang' => 1]));
+        $this->assertSame('installed', $asset->fresh()->installation_status);
+        $this->post(route('field.identify', $asset), ['found' => '1', 'condition_grade' => 'A', 'pasang' => '1'])->assertRedirect(route('field.install', $room));
+
+        // petugas tidak bisa membuka halaman persetujuan
+        $this->get(\App\Filament\Pages\PersetujuanLapangan::getUrl())->assertRedirect(route('field.home'));
+
+        // label bermasalah masuk antrean cetak ulang
+        $broken = Asset::where('location_id', $room->id)->whereKeyNot($asset->id)->whereHas('activeLabel')->first();
+        if ($broken) {
+            $this->post(route('field.install.mark', [$room, $broken->activeLabel]), ['status' => 'damaged'])->assertRedirect(route('field.install', $room));
+            $this->assertSame('damaged', $broken->fresh()->installation_status);
+        }
+
+        // penyetuju (orang lain) mengaktifkan
+        $admin = User::whereHas('roles', fn ($q) => $q->where('slug', 'super-admin'))->firstOrFail();
+        $this->flushSession();
+        $this->actingAs($admin);
+        $this->get(\App\Filament\Pages\PersetujuanLapangan::getUrl())->assertOk();
+        \Livewire\Livewire::test(\App\Filament\Pages\PersetujuanLapangan::class)
+            ->assertCanSeeTableRecords([$asset])
+            ->assertCanNotSeeTableRecords(Asset::where('verification_status', 'unverified')->limit(3)->get())
+            ->callTableBulkAction('setujui', [$asset]);
+        $this->assertSame('active', $asset->fresh()->lifecycle_status, json_encode($asset->fresh()->missingForActivation()));
+    }
 }
