@@ -64,6 +64,32 @@ return [
             'label_w' => 50, 'label_h' => 30, 'cols' => 1, 'rows' => 1,
             'margin_top' => 0, 'margin_left' => 0, 'gap_x' => 0, 'gap_y' => 0, 'qr_mm' => 23,
         ],
+        'roll-40x30' => [
+            'name' => 'Printer label roll · 40 × 30 mm', 'type' => 'roll', 'page_w' => 40, 'page_h' => 30,
+            'label_w' => 40, 'label_h' => 30, 'cols' => 1, 'rows' => 1,
+            'margin_top' => 0, 'margin_left' => 0, 'gap_x' => 0, 'gap_y' => 0, 'qr_mm' => 20,
+        ],
+        'roll-50x25' => [
+            'name' => 'Printer label roll · 50 × 25 mm', 'type' => 'roll', 'page_w' => 50, 'page_h' => 25,
+            'label_w' => 50, 'label_h' => 25, 'cols' => 1, 'rows' => 1,
+            'margin_top' => 0, 'margin_left' => 0, 'gap_x' => 0, 'gap_y' => 0, 'qr_mm' => 21,
+        ],
+        'roll-60x40' => [
+            'name' => 'Printer label roll · 60 × 40 mm (mesin & aset besar)', 'type' => 'roll', 'page_w' => 60, 'page_h' => 40,
+            'label_w' => 60, 'label_h' => 40, 'cols' => 1, 'rows' => 1,
+            'margin_top' => 0, 'margin_left' => 0, 'gap_x' => 0, 'gap_y' => 0, 'qr_mm' => 30,
+        ],
+        // Pita laminasi (Brother TZe / Epson LK): lebar pita = tinggi label, panjang dipotong printer.
+        'tape-24' => [
+            'name' => 'Pita laminasi 24 mm · panjang 60 mm (Brother TZe / Epson LK)', 'type' => 'roll', 'page_w' => 60, 'page_h' => 24,
+            'label_w' => 60, 'label_h' => 24, 'cols' => 1, 'rows' => 1,
+            'margin_top' => 0, 'margin_left' => 0, 'gap_x' => 0, 'gap_y' => 0, 'qr_mm' => 20,
+        ],
+        'tape-18' => [
+            'name' => 'Pita laminasi 18 mm · panjang 50 mm (Brother TZe / Epson LK)', 'type' => 'roll', 'page_w' => 50, 'page_h' => 18,
+            'label_w' => 50, 'label_h' => 18, 'cols' => 1, 'rows' => 1,
+            'margin_top' => 0, 'margin_left' => 0, 'gap_x' => 0, 'gap_y' => 0, 'qr_mm' => 15,
+        ],
         'roll-75x50' => [
             'name' => 'Printer label roll · 75 × 50 mm', 'type' => 'roll', 'page_w' => 75, 'page_h' => 50,
             'label_w' => 75, 'label_h' => 50, 'cols' => 1, 'rows' => 1,

@@ -1,9 +1,11 @@
 @php
-    $pad = $p['label_h'] >= 40 ? 2.5 : 1.8;
+    // compact: label pendek (pita 18/24 mm, 50 × 25 mm): tanpa baris merek & catatan kaki agar teks tidak bertumpuk
+    $compact = $p['label_h'] < 28;
+    $pad = $p['label_h'] >= 40 ? 2.5 : ($compact ? 1.4 : 1.8);
     $qr = min($p['qr_mm'], $p['label_h'] - 2 * $pad);
     $textW = $p['label_w'] - $qr - 3 * $pad;
     $big = $p['label_h'] >= 40;
-    $wide = ! $big && $p['label_w'] >= 60; // mis. Tom & Jerry 64 × 32 mm: teks lebih besar
+    $wide = ! $big && ! $compact && $p['label_w'] >= 60; // mis. Tom & Jerry 64 × 32 mm: teks lebih besar
     $brand = \App\Support\Brand::labelHeading();
 @endphp
 <!doctype html>
@@ -23,7 +25,7 @@
     .txt { position: absolute; left: {{ $qr + 2 * $pad }}mm; top: {{ $pad }}mm; width: {{ $textW }}mm; height: {{ $p['label_h'] - 2 * $pad }}mm; overflow: hidden; }
     .brand { font-size: {{ $big ? 6.5 : ($wide ? 5.8 : 5) }}pt; color: {{ \App\Support\Brand::color() }}; font-weight: bold; letter-spacing: .2pt; text-transform: uppercase; }
     .code { font-size: {{ $big ? 9.5 : ($wide ? 8.4 : 7) }}pt; font-weight: bold; margin-top: .6mm; }
-    .name { font-size: {{ $big ? 7.5 : ($wide ? 6.8 : 5.6) }}pt; margin-top: .6mm; line-height: 1.15; max-height: {{ $big ? 9 : ($wide ? 7 : 5.2) }}mm; overflow: hidden; }
+    .name { font-size: {{ $big ? 7.5 : ($wide ? 6.8 : 5.6) }}pt; margin-top: .6mm; line-height: 1.15; max-height: {{ $big ? 9 : ($wide ? 7 : ($compact && $p['label_h'] < 20 ? 2.6 : 5.2)) }}mm; overflow: hidden; }
     .loc { font-size: {{ $big ? 7 : ($wide ? 6.6 : 5.4) }}pt; margin-top: .6mm; font-weight: bold; color: #44403c; }
     .foot { position: absolute; bottom: 0; left: 0; font-size: {{ $big ? 5.5 : ($wide ? 5 : 4.2) }}pt; color: #57534e; }
     .copy { position: absolute; right: .8mm; bottom: .4mm; font-size: 3.6pt; color: #a8a29e; }
@@ -40,7 +42,7 @@
             <div style="position:absolute; left:{{ $p['margin_left'] - 3 }}mm; top:{{ $p['margin_top'] - 3 }}mm; width:{{ $blockW + 6 }}mm; height:{{ $blockH + 6 }}mm; border:0.3mm dashed #b45309; box-sizing:border-box;"></div>
             <div style="position:absolute; left:{{ $p['margin_left'] - 3 }}mm; top:{{ $p['margin_top'] - 7 }}mm; font-size:6.5pt; color:#b45309;">Posisi lembar label (tempel lembar Tom &amp; Jerry tepat di sini)</div>
         @endif
-        @if ($test ?? false)
+        @if (($test ?? false) && $p['type'] === 'a4')
             <div style="position:absolute; left:15mm; right:15mm; top:{{ min($p['page_h'] - 60, $p['margin_top'] + $blockH + 10) }}mm; font-size:7.5pt; color:#44403c; line-height:1.45;">
                 <b>LEMBAR UJI · {{ $p['name'] }}</b><br>
                 1. Cetak halaman ini di kertas HVS biasa dengan skala 100% (matikan "Fit to page").<br>
@@ -62,7 +64,7 @@
             <div class="cell {{ $guides ? 'guide' : '' }}" style="left: {{ $left }}mm; top: {{ $top }}mm;">
                 <img class="qr" src="{{ $c['qr'] }}" alt="">
                 <div class="txt">
-                    <div class="brand">{{ $brand }}</div>
+                    @unless ($compact)<div class="brand">{{ $brand }}</div>@endunless
                     @php
                         // kode panjang dipecah di batas lokasi | jenis-urut: "WW-03-305" / "AC-SPLIT-01"
                         $code = (string) $i->code_snapshot;
@@ -75,7 +77,7 @@
                     <div class="code" style="font-size:{{ $fitPt }}pt; line-height:1.12; word-break:break-all">{!! collect($lines)->map(fn ($l) => e($l))->join('<br>') !!}</div>
                     <div class="name">{{ \Illuminate\Support\Str::limit($i->name_snapshot, $big ? 60 : ($wide ? 50 : 38)) }}</div>
                     @if ($i->location_snapshot)<div class="loc">{{ \Illuminate\Support\Str::limit($i->location_snapshot, $wide ? 34 : 28) }}</div>@endif
-                    <div class="foot">Scan untuk info &amp; lapor kerusakan</div>
+                    @unless ($compact)<div class="foot">Scan untuk info &amp; lapor kerusakan</div>@endunless
                 </div>
                 <div class="copy">{{ $batch->number }}·{{ $i->sequence }}</div>
             </div>
