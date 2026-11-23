@@ -10,12 +10,16 @@ use App\Models\AssetQuantityGroup;
 use App\Models\Attachment;
 use App\Models\InstallationEvent;
 use App\Models\Location;
+use App\Models\ScanLog;
+use App\Models\User;
 use App\Services\AssetService;
 use App\Services\InstallationService;
 use App\Services\LabelService;
 use App\Services\QrResolver;
 use App\Services\WorkflowException;
 use App\Support\Fmt;
+use App\Support\Help\RoleGuide;
+use App\Support\ImageCompressor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -47,7 +51,7 @@ class FieldController extends Controller
         if (RateLimiter::tooManyAttempts($key, 5)) {
             return back()->withErrors(['email' => 'Terlalu banyak percobaan. Coba lagi dalam '.RateLimiter::availableIn($key).' detik.'])->onlyInput('email');
         }
-        $user = \App\Models\User::where('email', $data['email'])->first();
+        $user = User::where('email', $data['email'])->first();
         if (! $user || ! $user->is_active || ! Hash::check($data['password'], $user->password)) {
             RateLimiter::hit($key, 60);
 
@@ -108,7 +112,7 @@ class FieldController extends Controller
     // ---------------- scan ----------------
     public function guide(): View
     {
-        return view('field.guide', ['g' => \App\Support\Help\RoleGuide::get('field-officer')]);
+        return view('field.guide', ['g' => RoleGuide::get('field-officer')]);
     }
 
     public function scan(): View
@@ -120,9 +124,11 @@ class FieldController extends Controller
     {
         $kode = trim((string) $request->input('kode'));
         $r = $resolver->resolve($kode);
-        \App\Models\ScanLog::create([
+        ScanLog::create([
             'user_id' => $request->user()->id, 'asset_label_id' => $r['label']->id ?? null, 'asset_id' => $r['asset']->id ?? null,
-            'result' => match ($r['type']) { 'asset' => 'ok', 'group' => 'group', 'revoked' => 'revoked', 'foreign' => 'foreign', default => 'unknown' },
+            'result' => match ($r['type']) {
+                'asset' => 'ok', 'group' => 'group', 'revoked' => 'revoked', 'foreign' => 'foreign', default => 'unknown'
+            },
             'channel' => 'field', 'ip_address' => $request->ip(), 'scanned_at' => now(),
         ]);
 
@@ -191,7 +197,7 @@ class FieldController extends Controller
             'operational_status' => 'nullable|in:'.implode(',', array_keys(Asset::OPERATIONAL)),
             'brand' => 'nullable|string|max:100', 'model' => 'nullable|string|max:100', 'serial_number' => 'nullable|string|max:100',
             'note' => 'nullable|string|max:1000',
-            'photos' => 'nullable|array|max:4', 'photos.*' => 'image|max:12288',
+            'photos' => 'nullable|array|max:4', 'photos.*' => 'image|max:20480',
         ]);
         if ($d['found'] === '0' && blank($d['note'] ?? null)) {
             return back()->withErrors(['note' => 'Tulis keterangan bila aset tidak ditemukan.'])->withInput();
@@ -247,7 +253,7 @@ class FieldController extends Controller
             'brand' => 'nullable|string|max:100', 'model' => 'nullable|string|max:100', 'serial_number' => 'nullable|string|max:100',
             'condition_grade' => 'required|in:'.implode(',', array_keys(Asset::CONDITIONS)),
             'operational_status' => 'required|in:'.implode(',', array_keys(Asset::OPERATIONAL)),
-            'note' => 'nullable|string|max:1000', 'photos' => 'nullable|array|max:4', 'photos.*' => 'image|max:12288',
+            'note' => 'nullable|string|max:1000', 'photos' => 'nullable|array|max:4', 'photos.*' => 'image|max:20480',
         ]);
         $user = $request->user();
         $asset = DB::transaction(function () use ($d, $location, $user, $request) {
@@ -403,28 +409,12 @@ class FieldController extends Controller
             ->whereIn('lifecycle_status', ['draft', 'active'])->where('verification_status', 'unverified')->orderBy('name')->first() : null;
     }
 
-    /** Foto dari kamera ponsel diperkecil (maks. 1600 px, JPEG 80) agar hemat ruang & cepat diunggah. */
+    /** Foto apa pun dijadikan JPEG < 500 KB (maks. 1600 px) agar hemat ruang & cepat diunggah. */
     private function storePhoto(Asset $asset, UploadedFile $file, $user, bool $primary): void
     {
         $raw = file_get_contents($file->getRealPath());
-        $jpg = $raw;
-        $mime = $file->getMimeType() ?: 'image/jpeg';
-        if (function_exists('imagecreatefromstring') && ($img = @imagecreatefromstring($raw))) {
-            if (function_exists('exif_read_data') && $mime === 'image/jpeg') {
-                $o = @exif_read_data($file->getRealPath())['Orientation'] ?? 1;
-                $img = match ((int) $o) { 3 => imagerotate($img, 180, 0), 6 => imagerotate($img, -90, 0), 8 => imagerotate($img, 90, 0), default => $img };
-            }
-            $w = imagesx($img);
-            $h = imagesy($img);
-            $s = min(1, 1600 / max($w, $h));
-            if ($s < 1) {
-                $img = imagescale($img, (int) round($w * $s), (int) round($h * $s));
-            }
-            ob_start();
-            imagejpeg($img, null, 80);
-            $jpg = ob_get_clean();
-            $mime = 'image/jpeg';
-        }
+        $jpg = ImageCompressor::toJpeg($raw) ?? $raw;
+        $mime = 'image/jpeg';
         $sum = hash('sha256', $jpg);
         $path = 'assets/photos/lapangan/'.substr($sum, 0, 2).'/'.$sum.'.jpg';
         $disk = Storage::disk('local');

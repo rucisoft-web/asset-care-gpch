@@ -2,15 +2,20 @@
 
 namespace App\Filament\Support;
 
+use App\Models\Asset;
 use App\Models\Location;
+use App\Models\ServiceRequest;
 use App\Models\User;
 use App\Services\WorkflowException;
 use App\Support\Fmt;
+use App\Support\ImageCompressor;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -33,13 +38,13 @@ class F
     public static function asset(string $name = 'asset_id', string $label = 'Aset', ?\Closure $scope = null): Select
     {
         return Select::make($name)->label($label)->native(false)->searchable()
-            ->getSearchResultsUsing(fn (string $search) => \App\Models\Asset::query()
+            ->getSearchResultsUsing(fn (string $search) => Asset::query()
                 ->when($scope, $scope)
                 ->where(fn ($q) => $q->where('asset_code', 'like', "%{$search}%")->orWhere('name', 'like', "%{$search}%")
                     ->orWhere('serial_number', 'like', "%{$search}%")->orWhereHas('location', fn ($l) => $l->where('full_path', 'like', "%{$search}%")))
                 ->with('location')->limit(40)->get()
                 ->mapWithKeys(fn ($a) => [$a->id => $a->asset_code.' · '.$a->name.($a->location ? ' · '.$a->location->labelText() : '')])->all())
-            ->getOptionLabelUsing(fn ($value) => ($a = \App\Models\Asset::with('location')->find($value)) ? $a->asset_code.' · '.$a->name.($a->location ? ' · '.$a->location->labelText() : '') : null);
+            ->getOptionLabelUsing(fn ($value) => ($a = Asset::with('location')->find($value)) ? $a->asset_code.' · '.$a->name.($a->location ? ' · '.$a->location->labelText() : '') : null);
     }
 
     public static function money(string $name, string $label): TextInput
@@ -48,12 +53,23 @@ class F
             ->helperText('Kosongkan bila belum diketahui (tidak diisi nol).');
     }
 
-    /** Unggahan privat: JPG/PNG/PDF, nama acak, ukuran dibatasi. */
+    /**
+     * Unggahan privat: foto (JPG/PNG/WebP/GIF/BMP) atau PDF, nama acak.
+     * Foto diperkecil di browser sebelum diunggah, lalu di server selalu disimpan sebagai JPEG < 500 KB.
+     */
     public static function upload(string $name, string $label, string $dir, bool $multiple = false): FileUpload
     {
         $f = FileUpload::make($name)->label($label)->disk('local')->directory($dir)->visibility('private')
-            ->acceptedFileTypes(['image/jpeg', 'image/png', 'application/pdf'])->maxSize(8192)
-            ->image()->imageResizeMode('contain')->imageResizeTargetWidth(1920)->imageResizeTargetHeight(1920)
+            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'application/pdf'])->maxSize(20480)
+            ->imageResizeMode('contain')->imageResizeTargetWidth((string) ImageCompressor::MAX_SIDE)->imageResizeTargetHeight((string) ImageCompressor::MAX_SIDE)
+            ->saveUploadedFileUsing(function ($file) use ($dir) {
+                $raw = (string) file_get_contents($file->getRealPath());
+                $jpg = str_starts_with((string) $file->getMimeType(), 'image/') ? ImageCompressor::toJpeg($raw) : null;
+                $path = trim($dir, '/').'/'.Str::random(40).($jpg !== null ? '.jpg' : '.'.($file->guessExtension() ?: 'bin'));
+                Storage::disk('local')->put($path, $jpg ?? $raw);
+
+                return $path;
+            })
             ->downloadable(false)->openable(false)->previewable(true);
 
         return $multiple ? $f->multiple()->maxFiles(6) : $f;
@@ -69,7 +85,7 @@ class F
     public static function priorityColumn(string $name = 'priority'): TextColumn
     {
         return TextColumn::make($name)->label('Prioritas')->badge()->sortable()
-            ->color(fn ($state) => \App\Models\ServiceRequest::PRIORITY_COLORS[$state] ?? 'gray')
+            ->color(fn ($state) => ServiceRequest::PRIORITY_COLORS[$state] ?? 'gray')
             ->icon(fn ($state) => $state === 'P1' ? 'heroicon-m-exclamation-triangle' : null);
     }
 

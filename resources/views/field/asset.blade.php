@@ -47,8 +47,7 @@
         </div>
 
         <label>Foto aset (boleh lebih dari satu)</label>
-        <label class="btn alt" style="margin:0;font-weight:600">📷 Ambil foto<input type="file" name="photos[]" accept="image/*" capture="environment" multiple hidden id="ph"></label>
-        <div id="phn" class="muted" style="margin-top:6px"></div>
+        <label class="btn alt" style="margin:0;font-weight:600">📷 Ambil foto<input type="file" name="photos[]" accept="image/*" capture="environment" multiple hidden data-compress id="ph"></label>
         @error('photos.*')<div class="err-t">{{ $message }}</div>@enderror
     </div>
 
@@ -66,7 +65,6 @@
   const ada = document.getElementById('ada'), w = document.getElementById('wajib');
   const sync = () => { const no = document.getElementById('f0').checked; ada.style.display = no ? 'none' : ''; w.textContent = no ? '(wajib: jelaskan)' : '(opsional)'; };
   document.querySelectorAll('input[name=found]').forEach(r => r.addEventListener('change', sync)); sync();
-  document.getElementById('ph').addEventListener('change', e => { const n = e.target.files.length; document.getElementById('phn').textContent = n ? n + ' foto dipilih' : ''; });
   document.getElementById('f').addEventListener('submit', e => { const b = e.target.querySelector('button'); b.disabled = true; b.textContent = 'Menyimpan…'; });
 })();
 </script>

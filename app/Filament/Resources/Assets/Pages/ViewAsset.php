@@ -2,12 +2,15 @@
 
 namespace App\Filament\Resources\Assets\Pages;
 
+use App\Filament\Concerns\RunsWorkflow;
 use App\Filament\Pages\CetakLabel;
-use App\Filament\Resources\AssetTransfers\AssetTransferResource;
 use App\Filament\Resources\Assets\AssetResource;
+use App\Filament\Resources\AssetTransfers\AssetTransferResource;
 use App\Filament\Resources\ServiceRequests\ServiceRequestResource;
 use App\Filament\Support\F;
 use App\Models\Asset;
+use App\Models\WoCostLine;
+use App\Services\AssetDuplicateService;
 use App\Services\AssetService;
 use App\Services\LabelService;
 use App\Support\Fmt;
@@ -27,7 +30,7 @@ use Filament\Schemas\Schema;
 /** Kartu aset: kode, nama, lokasi, status & tindakan yang relevan (hasil scan QR membuka halaman ini). */
 class ViewAsset extends ViewRecord
 {
-    use \App\Filament\Concerns\RunsWorkflow;
+    use RunsWorkflow;
 
     protected static string $resource = AssetResource::class;
 
@@ -60,7 +63,7 @@ class ViewAsset extends ViewRecord
                 TextEntry::make('financial.replacement_estimate')->label('Estimasi pengganti')->formatStateUsing(fn ($state) => Fmt::rp($state))->placeholder('belum diketahui'),
                 TextEntry::make('financial.accounting_ref')->label('Ref. akuntansi')->placeholder('-'),
                 TextEntry::make('maint_cost')->label('Biaya perawatan 12 bulan')
-                    ->state(fn ($record) => Fmt::rp(\App\Models\WoCostLine::whereHas('workOrder', fn ($q) => $q->where('asset_id', $record->id))->where('created_at', '>=', now()->subYear())->sum('amount'))),
+                    ->state(fn ($record) => Fmt::rp(WoCostLine::whereHas('workOrder', fn ($q) => $q->where('asset_id', $record->id))->where('created_at', '>=', now()->subYear())->sum('amount'))),
             ]),
             Section::make('Penyusutan (komersial & fiskal)')->visible($fin)->collapsible()->collapsed()->schema([
                 View::make('filament.asset-depreciation')->viewData(['asset' => $this->record]),
@@ -118,6 +121,32 @@ class ViewAsset extends ViewRecord
                     ->visible(fn () => $u->hasPermission('asset.activate') && $a->lifecycle_status === 'active')
                     ->schema([Textarea::make('reason')->label('Alasan')->required()])
                     ->action(fn (array $data) => $this->run(fn () => app(AssetService::class)->retire($a, $data['reason'], $u), 'Aset berhenti dipakai (masih dimiliki)')),
+                Action::make('dobel')->label('Hapus entri dobel')->icon('heroicon-o-document-duplicate')->color('danger')
+                    ->visible(fn () => $u->hasPermission('asset.delete'))
+                    ->modalHeading('Hapus entri dobel '.$a->asset_code)
+                    ->modalDescription(fn () => ($b = app(AssetDuplicateService::class)->blockers($a))
+                        ? 'Tidak bisa dihapus: entri ini sudah punya riwayat ('.implode(', ', $b).'). Gunakan "Hentikan pemakaian" atau koreksi datanya.'
+                        : 'Pilih aset yang BENAR (yang dipertahankan). Foto, lampiran, catatan, dokumen, label & slot kamar dipindah ke aset itu, isian yang kosong ikut dilengkapi, lalu entri ini dihapus. Isi entri ini tetap tersimpan di jejak audit.')
+                    ->schema([
+                        Select::make('keep_id')->label('Aset yang dipertahankan')->required()->searchable()
+                            ->options(fn () => Asset::where('location_id', $a->location_id)->whereKeyNot($a->id)->orderBy('asset_code')->limit(50)->get()
+                                ->mapWithKeys(fn ($x) => [$x->id => $x->asset_code.' · '.$x->name])->all())
+                            ->getSearchResultsUsing(fn (string $search) => Asset::whereKeyNot($a->id)
+                                ->where(fn ($q) => $q->where('asset_code', 'like', "%{$search}%")->orWhere('name', 'like', "%{$search}%"))
+                                ->orderBy('asset_code')->limit(30)->get()->mapWithKeys(fn ($x) => [$x->id => $x->asset_code.' · '.$x->name])->all())
+                            ->getOptionLabelUsing(fn ($value) => ($x = Asset::find($value)) ? $x->asset_code.' · '.$x->name : null)
+                            ->helperText('Daftar awal: aset lain di lokasi yang sama. Ketik kode/nama untuk mencari di lokasi lain.'),
+                        Textarea::make('reason')->label('Alasan')->required()->default('Entri dobel'),
+                    ])
+                    ->modalSubmitActionLabel('Hapus entri dobel')
+                    ->action(function (array $data) use ($a, $u) {
+                        $keep = null;
+                        if ($this->run(function () use ($a, $u, $data, &$keep) {
+                            $keep = app(AssetDuplicateService::class)->merge($a, Asset::findOrFail($data['keep_id']), $data['reason'], $u);
+                        }, 'Entri dobel dihapus dan digabung')) {
+                            $this->redirect(AssetResource::getUrl('view', ['record' => $keep]));
+                        }
+                    }),
                 EditAction::make(),
             ])->label('Lainnya')->button()->color('gray'),
         ];

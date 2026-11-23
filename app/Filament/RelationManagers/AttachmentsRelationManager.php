@@ -34,7 +34,7 @@ class AttachmentsRelationManager extends RelationManager
     {
         return $schema->components([
             Select::make('kind')->label('Jenis')->options(self::KINDS)->required()->native(false)->default('photo'),
-            F::upload('path', 'Berkas (JPG/PNG/PDF, maks 8 MB)', 'attachments/'.now()->format('Y/m'))->required()->storeFileNamesIn('original_name'),
+            F::upload('path', 'Berkas (foto atau PDF; foto otomatis diperkecil menjadi JPEG < 500 KB)', 'attachments/'.now()->format('Y/m'))->required()->storeFileNamesIn('original_name'),
         ]);
     }
 

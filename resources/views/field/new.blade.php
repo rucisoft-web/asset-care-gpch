@@ -22,7 +22,7 @@
     <label for="op">Status operasional</label>
     <select id="op" name="operational_status">@foreach (\App\Models\Asset::OPERATIONAL as $k => $v)<option value="{{ $k }}" @selected(old('operational_status', 'serviceable') === $k)>{{ $v }}</option>@endforeach</select>
     <label>Foto</label>
-    <label class="btn alt" style="margin:0;font-weight:600">📷 Ambil foto<input type="file" name="photos[]" accept="image/*" capture="environment" multiple hidden></label>
+    <label class="btn alt" style="margin:0;font-weight:600">📷 Ambil foto<input type="file" name="photos[]" accept="image/*" capture="environment" multiple hidden data-compress></label>
     <label for="note">Catatan</label><textarea id="note" name="note">{{ old('note') }}</textarea>
     <button class="btn" style="margin-top:16px">Simpan aset temuan</button>
 </form>

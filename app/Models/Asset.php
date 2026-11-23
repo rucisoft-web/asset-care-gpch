@@ -4,20 +4,28 @@ namespace App\Models;
 
 use App\Models\Concerns\Auditable;
 use App\Models\Concerns\BelongsToProperty;
+use App\Services\LabelService;
+use App\Support\AssetCode;
+use App\Support\Fmt;
 use App\Support\Sequence;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class Asset extends Model
 {
     use Auditable, BelongsToProperty, HasUlids;
+
+    /** Diset AssetDuplicateService: entri dobel boleh dihapus walau sudah aktif (riwayat sudah dipindah/diperiksa). */
+    public bool $deletingAsDuplicate = false;
 
     protected $guarded = ['id', 'asset_code', 'public_id'];
 
@@ -57,7 +65,7 @@ class Asset extends Model
     protected static function booted(): void
     {
         static::creating(function (Asset $a) {
-            $a->asset_code ??= \App\Support\AssetCode::next($a) ?? Sequence::assetCode($a->property_id);
+            $a->asset_code ??= AssetCode::next($a) ?? Sequence::assetCode($a->property_id);
             $a->created_by ??= Auth::id();
             $cat = $a->category_id ? AssetCategory::withoutGlobalScopes()->find($a->category_id) : null;
             $a->criticality ??= $cat?->default_criticality;
@@ -65,11 +73,11 @@ class Asset extends Model
         // pindah lokasi / ganti jenis → kode ikut berubah; kode lama tetap tercatat & bisa dicari
         static::updating(function (Asset $a) {
             if ($a->isDirty('location_id') || $a->isDirty('category_id')) {
-                $prefix = \App\Support\AssetCode::prefix($a->location_id, $a->category_id);
+                $prefix = AssetCode::prefix($a->location_id, $a->category_id);
                 if ($prefix && ! str_starts_with((string) $a->asset_code, $prefix.'-')) {
                     $old = $a->getOriginal('asset_code');
-                    $a->asset_code = \App\Support\AssetCode::next($a);
-                    $a->former_codes = \App\Support\AssetCode::appendFormer($a->former_codes, $old);
+                    $a->asset_code = AssetCode::next($a);
+                    $a->former_codes = AssetCode::appendFormer($a->former_codes, $old);
                 }
             }
         });
@@ -81,7 +89,7 @@ class Asset extends Model
                     'status' => 'needs_relabel', 'note' => 'Kode aset berubah: label tertulis "'.$last->code_snapshot.'", sekarang "'.$a->asset_code.'"',
                     'actor_id' => Auth::id(), 'occurred_at' => now(),
                 ]);
-                app(\App\Services\LabelService::class)->syncInstallStatus($label);
+                app(LabelService::class)->syncInstallStatus($label);
             }
         });
         static::saving(function (Asset $a) {
@@ -99,7 +107,7 @@ class Asset extends Model
         static::created(fn (Asset $a) => $a->recordStatusEvents(true));
         static::updated(fn (Asset $a) => $a->recordStatusEvents(false));
         static::deleting(function (Asset $a) {
-            if ($a->lifecycle_status !== 'draft' || $a->hasTransactions()) {
+            if (! $a->deletingAsDuplicate && ($a->lifecycle_status !== 'draft' || $a->hasTransactions())) {
                 throw ValidationException::withMessages(['asset' => 'Aset aktif atau yang sudah bertransaksi tidak dapat dihapus permanen. Gunakan status siklus hidup.']);
             }
         });
@@ -187,7 +195,7 @@ class Asset extends Model
     }
 
     /** Dokumen register yang menaungi aset ini (boleh nol). */
-    public function documents(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function documents(): BelongsToMany
     {
         return $this->belongsToMany(AssetDocument::class, 'asset_document_links')->withTimestamps();
     }
@@ -201,10 +209,10 @@ class Asset extends Model
     }
 
     /** Izin/riksa uji K3 kedaluwarsa → aset tidak boleh dioperasikan (Register Dokumen 4.4). */
-    public function expiredK3Documents(): \Illuminate\Support\Collection
+    public function expiredK3Documents(): Collection
     {
         // dokumen K3 hidup yang lewat masa berlaku (termasuk yang sedang diperpanjang), kecuali sudah ada dokumen K3 jenis sama yang masih berlaku
-        $today = now(\App\Support\Fmt::tz())->toDateString();
+        $today = now(Fmt::tz())->toDateString();
         $docs = $this->documents()->whereHas('type', fn ($t) => $t->where('is_k3', true))
             ->whereIn('asset_documents.status', AssetDocument::LIVE)->with('type')->get();
 

@@ -76,6 +76,7 @@ nav.bottom a.scan .ring{width:50px;height:50px;margin-top:-22px;border-radius:50
     <a href="{{ route('field.password') }}" class="{{ $r === 'field.password' ? 'on' : '' }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>Akun</a>
 </nav>
 @endauth
+<script src="{{ asset('js/assetcare-photo.js') }}?v={{ substr((string) @md5_file(public_path('js/assetcare-photo.js')), 0, 10) }}"></script>
 @stack('scripts')
 </body>
 </html>
