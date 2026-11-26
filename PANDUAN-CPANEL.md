@@ -272,6 +272,16 @@ Folder `data-awal/` (dikirim terpisah, tidak ada di repo publik) berisi:
 
 Kedua cara menghasilkan aset berstatus **Draft · belum terverifikasi**, sehingga tim tetap memverifikasi fisik lewat scan label.
 
+## Backup dari dalam aplikasi (untuk bagian IT)
+
+Menu **Pengaturan › Backup database** (peran IT Administrator & Super Admin):
+
+- **Buat backup sekarang** membuat satu berkas `.sql` bertanggal (mis. `asset-care-gpch_db_2026-11-26_084715.sql`) yang dikemas ZIP.
+- **Unduh** untuk menyimpannya di NAS / drive IT di luar server.
+- Backup otomatis dibuat setiap hari pukul 01:30 lewat cron `schedule:run`, disimpan di `storage/app/private/backups` selama 30 hari (5 terbaru selalu disimpan).
+- Aplikasi memakai `mysqldump` bila tersedia. Bila hosting mematikannya, aplikasi memakai pembuang SQL bawaan, dan hasilnya tetap bisa dipulihkan dengan cara yang sama.
+- Memulihkan: ekstrak ZIP, lalu `mysql -u cpuser_asset -p cpuser_assetcare < asset-care-gpch_db_….sql`.
+
 ## Memulihkan dari backup
 
 ```bash

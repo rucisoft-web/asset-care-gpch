@@ -324,6 +324,12 @@ return [
         'konsep' => ['Aset yang labelnya sudah ditempel & di-scan petugas di menu Lapangan, serta sudah dicek kondisinya, muncul di sini untuk disetujui. Persetujuan mengaktifkan aset. Penyetuju harus berbeda dari petugas yang memeriksa.'],
         'langkah' => ['Filter per gedung/lantai; tahap bawaan "Siap disetujui".', 'Periksa foto, kondisi, catatan; klik baris untuk membuka kartu aset.', 'Centang lalu "Setujui & aktifkan", atau "Kembalikan untuk dicek ulang" dengan alasan.', 'Pantau tahap "Aset tidak ditemukan" dan "Label rusak / hilang" setiap hari.'],
     ],
+    'pages.backup-database' => [
+        'title' => 'Backup database',
+        'konsep' => ['Seluruh database disimpan sebagai satu berkas .sql bertanggal yang dikemas ZIP. Backup otomatis dibuat setiap hari pukul 01:30 dan disimpan 30 hari.'],
+        'langkah' => ['Klik "Buat backup sekarang" sebelum pembaruan aplikasi atau perubahan besar.', 'Klik "Unduh" lalu simpan ZIP di NAS / drive IT, di luar server.', 'Memulihkan: ekstrak ZIP lalu jalankan mysql -u USER -p NAMA_DATABASE < berkas.sql (oleh IT).'],
+        'tips' => ['Berkas memuat data pengguna: simpan di tempat terbatas dan jangan dibagikan.', 'Foto & dokumen lampiran tidak termasuk; dicadangkan terpisah oleh skrip server (deploy/backup-db.sh).'],
+    ],
     'pages.panduan-peran' => [
         'title' => 'Panduan per peran',
         'konsep' => ['Panduan langkah demi langkah untuk setiap peran, dengan tangkapan layar web atau ponsel sesuai cara kerja peran itu. Peran Anda tampil paling atas.'],

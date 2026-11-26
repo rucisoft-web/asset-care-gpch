@@ -13,3 +13,6 @@ Schedule::command('assetcare:pm-generate')->dailyAt('06:00')->timezone(config('a
 
 // Label QR untuk aset yang masuk lewat impor SQL (token dibuat dengan APP_KEY server). Aman diulang.
 Schedule::command('assetcare:labels-ensure')->everyTenMinutes()->withoutOverlapping();
+
+// Backup database harian (.sql bertanggal dalam ZIP) yang bisa diunduh IT di menu Pengaturan › Backup database
+Schedule::command('assetcare:backup-db')->dailyAt('01:30')->timezone(config('assetcare.display_timezone', 'Asia/Jakarta'))->withoutOverlapping();

@@ -56,6 +56,7 @@ class PermissionCatalog
         'reference.manage' => ['Lokasi, kategori, departemen, tipe kamar, vendor', 'Pengaturan'],
         'settings.manage' => ['SLA & batas persetujuan', 'Pengaturan'],
         'user.manage' => ['Pengguna & penugasan peran', 'Pengaturan'],
+        'backup.manage' => ['Membuat & mengunduh backup database', 'Pengaturan'],
         'role.manage' => ['Peran & izin', 'Pengaturan'],
         'audit.view' => ['Log audit', 'Pengaturan'],
     ];
@@ -77,7 +78,7 @@ class PermissionCatalog
         'finance' => ['Finance / Chief Accountant', 'Data finansial, validasi biaya, anggaran & rekonsiliasi', ['dashboard.view', 'report.view', 'report.export', 'asset.view', 'asset.view_financial', 'asset.edit_financial', 'wo.view', 'wo.approve', 'wo.cost_finalize', 'request.view_all', 'transfer.approve', 'document.view', 'document.view_restricted', 'document.manage', 'policy.manage']],
         'storekeeper' => ['Storekeeper', 'Mengelola stok engineering (rilis B)', ['asset.view', 'wo.view', 'request.create']],
         'purchasing' => ['Purchasing', 'Vendor & referensi pembelian', ['asset.view', 'wo.view', 'request.create', 'reference.manage', 'document.view']],
-        'it-admin' => ['IT Administrator', 'Konfigurasi teknis & akun; tidak otomatis berwenang menyetujui biaya', ['asset.view', 'request.create', 'user.manage', 'role.manage', 'reference.manage', 'settings.manage', 'audit.view', 'document.view', 'document.manage']],
+        'it-admin' => ['IT Administrator', 'Konfigurasi teknis & akun; tidak otomatis berwenang menyetujui biaya', ['asset.view', 'request.create', 'user.manage', 'role.manage', 'reference.manage', 'settings.manage', 'backup.manage', 'audit.view', 'document.view', 'document.manage']],
         'auditor' => ['Auditor', 'Membaca data & jejak audit dalam lingkup yang ditetapkan', ['report.view', 'report.export', 'asset.view', 'asset.view_financial', 'wo.view', 'request.view_all', 'audit.view', 'document.view', 'document.view_restricted']],
     ];
 }
