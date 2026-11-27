@@ -6,6 +6,7 @@
 #     bash deploy/deploy-cpanel.sh seed      # pertama kali + data contoh (kamar 301–310, template Deluxe, akun jabatan)
 #     bash deploy/deploy-cpanel.sh install-data  # pertama kali + DATA AWAL inventaris GPCH (aset, lokasi, foto)
 #     bash deploy/deploy-cpanel.sh update    # rilis pembaruan kode (data tetap)
+#     bash deploy/deploy-cpanel.sh pindah-server # server baru: muat database produksi + foto/dokumen dari server lama
 #  Variabel opsional: PHP_BIN=/opt/cpanel/ea-php83/root/usr/bin/php
 # ============================================================
 set -euo pipefail
@@ -82,6 +83,32 @@ case "$MODE" in
     echo ""
     echo "  Login: admin@assetcare.local / AssetCare@GPCH2026 (wajib diganti saat login pertama)"
     ;;
+  pindah-server)
+    # Server baru: database KOSONG + .env berisi APP_KEY yang SAMA dengan server lama (wajib, untuk cetak ulang label & sesi).
+    $ART config:clear >/dev/null 2>&1 || true
+    grep -q '^APP_KEY=base64' .env || { echo "✘ APP_KEY di .env kosong. Salin APP_KEY dari .env server lama (jangan buat baru)."; exit 1; }
+    if $ART assetcare:installed >/dev/null 2>&1; then
+      echo "✘ Database tujuan sudah berisi data. Pakai database baru yang kosong."
+      exit 1
+    fi
+    SQL="${SQL:-database/sql/asset-care-gpch-data-produksi.sql}"
+    [ -f "$SQL" ] || { echo "✘ $SQL tidak ada."; exit 1; }
+    echo "» Memuat database produksi: $SQL"
+    $ART assetcare:load-sql "$SQL"
+    LAMPIRAN="${LAMPIRAN:-}"
+    [ -z "$LAMPIRAN" ] && for f in "$HOME/asset-care-lampiran.tar.gz" "$APP_DIR/asset-care-lampiran.tar.gz"; do [ -f "$f" ] && LAMPIRAN="$f" && break; done
+    if [ -n "$LAMPIRAN" ]; then
+      echo "» Memulihkan foto & dokumen dari $LAMPIRAN"
+      tar xzf "$LAMPIRAN" -C storage/app
+    else
+      echo "⚠ Arsip foto/dokumen (asset-care-lampiran.tar.gz) tidak ditemukan; foto lama belum ikut. Lihat CARA-PINDAH-SERVER.txt langkah 1."
+    fi
+    $ART migrate --force
+    $ART db:seed --class=Database\\Seeders\\ReferenceSeeder --force
+    $ART assetcare:labels-ensure
+    $ART assetcare:recode-assets
+    $ART assetcare:complete-room-assets
+    ;;
   update)
     $ART down --refresh=15 || true
     $ART migrate --force
@@ -90,7 +117,7 @@ case "$MODE" in
     $ART assetcare:recode-assets
     $ART assetcare:complete-room-assets
     ;;
-  *) echo "Mode tidak dikenal: $MODE (install | install-data | seed | update)"; exit 1 ;;
+  *) echo "Mode tidak dikenal: $MODE (install | install-data | seed | update | pindah-server)"; exit 1 ;;
 esac
 
 $ART storage:link >/dev/null 2>&1 || true

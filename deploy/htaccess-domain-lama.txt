@@ -1,0 +1,7 @@
+# Pasang sebagai .htaccess di folder document root domain LAMA (asset-care-gpch.rucisoft.id)
+# setelah aplikasi pindah ke asset-care.gpchotel.com.
+# Label QR yang sudah tertempel berisi alamat lama (…/q/TOKEN); aturan ini mengalihkannya
+# ke alamat baru sehingga scan dengan kamera ponsel biasa tetap membuka aset yang benar.
+# Biarkan domain lama aktif selama label lama masih dipakai.
+RewriteEngine On
+RewriteRule ^(.*)$ https://asset-care.gpchotel.com/$1 [R=301,L,NE]
